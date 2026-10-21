@@ -1,6 +1,6 @@
 ---
 task: Orquestrador diário, sentinelas e estado das 9 fontes atuais
-status: em andamento — passos 1 a 8 concluídos (21/10/2026); parado antes do passo 9 para revisão do backtest do 3σ e do diff
+status: concluída (21/10/2026)
 criada: 2026-10-21
 depende_de: 34 (concluída), design 33
 ---
@@ -65,10 +65,12 @@ Coleta quando: não há estado da fonte (1ª execução), a `marca` mudou, passo
       — *19 testes do orquestrador (`test_orquestrador.py`) cobrem (a) a (g), recoleta fixa de 30 dias, `defasado` nos três prazos e sentinela fora do ar; 12 testes de ponta a ponta de `atualizar.py` cobrem (h) (`;rm -rf /`, `todas,TO-TER-01` e ids inventados são recusados com código 2 sem tocar nos arquivos); 54 testes de validação com o backtest nas séries reais*
 - [x] **`verificar.yml`:** `cron 0 17 * * *` (14h Brasília) e `workflow_dispatch` com `forcar`; `permissions` mínimas (`contents: write`, `issues: write`); `concurrency` sem cancelar a execução em andamento; `timeout-minutes: 60`; entrada passada por variável de ambiente e validada por lista; commit do `github-actions[bot]` com `[skip ci]` e sem `force push`; passa no `actionlint`, que também entra na CI.
       — *escrito; `actionlint` 1.7.12 local sem achados; job `workflows` adicionado à `ci.yml` com binário e SHA-256 fixos; CI verde no GitHub nos 3 jobs (`qualidade`, `segredos`, `workflows`; execução 39595543001, disparada à mão porque a mensagem do commit tinha o texto de pular a CI)*
-- [ ] **Prova no GitHub:** execução manual com `forcar=TO-TER-04` e depois `forcar=todas`: os valores batem com o painel (PIB de Palmas 14.168.469; receita do estado 15.568.042,57; titulares), a CI **não** dispara no commit do robô, e uma segunda execução sem novidade altera só o `estado_fontes.json`.
+- [x] **Prova no GitHub:** execução manual com `forcar=TO-TER-04` e depois `forcar=todas`: os valores batem com o painel (PIB de Palmas 14.168.469; receita do estado 15.568.042,57; titulares), a CI **não** dispara no commit do robô, e uma segunda execução sem novidade altera só o `estado_fontes.json`.
+      — *três execuções reais: `forcar=TO-TER-04` (execução 39596056490: só o TER-04 coletado, 8 sem novidade); `forcar=todas` (39596285074, 26 min: 9 fontes coletadas, todas `ok`); sem novidade (39600617765, 1 min: 9 "sem novidade", "Painel sem alteração"). Os dados da bateria completa ficaram **idênticos** aos da coleta manual de 14/10 (estado, 139 municípios, titulares e unidades); PIB de Palmas 14.168.469, RCL do estado 15.568.042,57, governador Wanderlei Barbosa. Os commits do robô (83613ee, f92d222, a50aef2; autor `github-actions[bot]`) não dispararam a CI.*
 - [x] **Issue automática** por fonte com 2 falhas seguidas, fechada quando volta a ok (lógica testada com `gh` simulado; o caminho real só será provado na primeira falha de verdade).
       — *`src/orquestracao/issues.py` + `scripts/sincronizar_issues.py`, 12 testes com `gh` simulado (abre com 2 falhas seguidas ou `defasado`, não duplica, fecha ao voltar a `ok`)*
-- [ ] Custo projetado abaixo de 400 dos 2.000 minutos mensais; `pytest`, `ruff` e CI verdes; gate S1–S23 reportado.
+- [x] Custo projetado abaixo de 400 dos 2.000 minutos mensais; `pytest`, `ruff` e CI verdes; gate S1–S23 reportado.
+      — *rotina diária ≈ 1 min; recoleta fixa mensal do SICONFI ≈ 26 min e do TSE ≈ 2 min; projeção ≈ 30 + 26 + 2 ≈ 60 min/mês (+ execuções manuais), contra 2.000; a bateria completa de teste custou 26 min; `pytest` 465 verdes, `ruff` limpo, CI verde nos 3 jobs; gate abaixo*
 
 ## Fora de escopo
 - Fontes novas (tasks 39–45); BigQuery a partir do GitHub (38); painel público e `estado_fontes` na tela (36); IDs da planilha no código (37).
@@ -84,8 +86,8 @@ Coleta quando: não há estado da fonte (1ª execução), a `marca` mudou, passo
 - [x] 6. Exportador que preserva o último dado válido e mescla o SICONFI por município.
 - [x] 7. `atualizar.py` com as regras de validação, incluindo o backtest do 3σ.
 - [x] 8. `verificar.yml`, issue automática e `actionlint` na CI.
-- [ ] 9. Execução real no GitHub (`forcar=TO-TER-04`, `forcar=todas`, execução sem novidade).
-- [ ] 10. Gate S1–S23, documentação e ROADMAP.
+- [x] 9. Execução real no GitHub (`forcar=TO-TER-04`, `forcar=todas`, execução sem novidade).
+- [x] 10. Gate S1–S23, documentação e ROADMAP.
 
 ## Segurança
 - **S1:** a única credencial é o `GITHUB_TOKEN` da própria execução; nenhum segredo novo.
@@ -129,6 +131,24 @@ Local = Mac do Bruno (21/10, 00h07 em Brasília); GitHub = runner `ubuntu-latest
 - **Limite do piso:** erro menor que o piso não é pego (um valor errado em 9% na população passa). Pega o erro de escala (×10, ×0,1), que é o risco real de uma mudança de unidade ou de vírgula no IBGE.
 - **Decisão pendente do Bruno:** piso de **6 p.p.** na desocupação (0 falsos positivos históricos) ou **5 p.p.** (2 marcados: os pulos reais da Covid, 3,7%; pega um erro de ×0,1 em taxas acima de 5,6%). Usei 6; `--piso TO-TER-07=5` reproduz o outro cenário.
 - `TO-REC-02` (RCL do estado) tem só 3 exercícios e não recebe 3σ; fica com integridade e a regra do estado obrigatório.
+
+## Gate S1–S23 (21/10/2026)
+| Item | Status | Evidência | Correção |
+|---|---|---|---|
+| S1 | ✅ | `.gitignore:13` (`.env`); nenhum segredo novo (só o `GITHUB_TOKEN` da execução); `varrer_segredos.sh` + gitleaks: 0 achados nos commits e na árvore | — |
+| S2 | ✅ | `scripts/atualizar.py:54` `ids_forcados` (lista de ids ou `todas`; 5 entradas hostis testadas em `tests/test_atualizar.py`); `verificar.yml:47` entra por variável de ambiente; estado validado com schema rígido (`estado.py:33`) | — |
+| S3 | N/A | nenhum SQL nesta task (a carga do BigQuery é a task 38); varredura de SQL por f-string/`.format` em `src` e `scripts`: 0 | — |
+| S4–S10 | N/A | sem login, sessão, JWT, cookie, CSRF nem servidor próprio | — |
+| S11 | N/A | nenhum servidor nesta task; HTTPS/headers do site são da task 36 (Pages) | tratar na spec 36 |
+| S12 | ✅ | `verificar.yml:18-20` `contents: write` e `issues: write` só nesse workflow; os outros 3 em `contents: read`; nenhum banco | — |
+| S13, S16–S18, S21, S23 | N/A | sem upload, Electron, VPS, WAF, chave de API própria nem conta de usuário | — |
+| S14 | ⚠️ | `pip-audit` no lock achou **PYSEC-2026-4320** (certifi 2026.7.22, raiz emSign com chaves comprometidas): **corrigido** para 2026.10.19 (`requirements*.txt`, commit 35adf56; reauditoria: 0 vulnerabilidades; sonda e 465 testes verdes). Ações fixadas por commit (`verificar.yml:31,33`). **Falta** `dependabot.yml` e `pip-audit` na CI | incluir os dois numa tarefa pequena (proposta ao Bruno) |
+| S15 | ✅ | exceções específicas; mensagens de erro numa linha e truncadas em 300 (`orquestrador.py:27,45`, `sentinelas.py:80`, `estado.py:104`) | — |
+| S19 | ⚠️ | Trivy só no `imagem.yml` (manual); a CI não o roda | decidir com a task 36/38 |
+| S20 | ⚠️ | `requirements.lock.txt` commitado, instalado com índice fixo `--index-url https://pypi.org/simple`; sem hashes (`--require-hashes`) | avaliar hashes junto do Dependabot |
+| S22 | ✅ | sem `print`/log de token ou segredo (varredura); relatório só com id da fonte e contagem; `verify=False`, `shell=True`, `eval`, `pickle`: 0 | — |
+
+Nenhum ❌. Os três ⚠️ não bloqueiam (repositório privado, sem produção pública ainda) e entram numa tarefa de endurecimento da cadeia de suprimentos.
 
 ## Verificação
 ```bash
