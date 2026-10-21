@@ -1,6 +1,6 @@
 ---
 task: Orquestrador diário, sentinelas e estado das 9 fontes atuais
-status: em andamento — passo 1 (sonda de alcance) em execução; pausa obrigatória depois dele
+status: em andamento — passo 1 concluído (21/10/2026); parado para revisão do Bruno antes do passo 2
 criada: 2026-10-21
 depende_de: 34 (concluída), design 33
 ---
@@ -51,8 +51,10 @@ Coleta quando: não há estado da fonte (1ª execução), a `marca` mudou, passo
 | `tests/orquestracao/*`, `tests/fixtures/gravadas/*` | criar: testes sem rede, com respostas reais gravadas |
 
 ## Critérios de aceite
-- [ ] **Sonda de alcance:** `scripts/testar_alcance.py` testa as 9 fontes atuais e os endereços das tasks 39–45 (Comex Stat, API DEMAS, Inep, CKAN do Tesouro Transparente, FTP do CAGED, FTP do DATASUS, API da CGU) com 1 requisição leve cada e timeout de 15 s. O relatório JSON traz `url`, `protocolo`, `status_code`, `latencia_ms`, `tls_ok`, `acessivel` e `classe`; endereço inacessível não derruba os demais. Roda local e no GitHub (`alcance.yml`, manual); o relatório comparativo é registrado nesta spec e a diferença entre os dois ambientes recebe a classe `bloqueio_rede_runner`.
-- [ ] **Pausa depois da sonda:** se IBGE, SICONFI ou TSE estiver inacessível a partir do runner, a task para e o plano é revisto com o Bruno antes de construir o resto.
+- [x] **Sonda de alcance:** `scripts/testar_alcance.py` testa as 9 fontes atuais e os endereços das tasks 39–45 (Comex Stat, API DEMAS, Inep, CKAN do Tesouro Transparente, FTP do CAGED, FTP do DATASUS, API da CGU) com 1 requisição leve cada e timeout de 15 s. O relatório JSON traz `url`, `protocolo`, `status_code`, `latencia_ms`, `tls_ok`, `acessivel` e `classe`; endereço inacessível não derruba os demais. Roda local e no GitHub (`alcance.yml`, manual); o relatório comparativo é registrado nesta spec e a diferença entre os dois ambientes recebe a classe `bloqueio_rede_runner`.
+      — *26 endereços testados (14 das fontes atuais e 12 das tasks 39–45) no Mac do Bruno e no runner do GitHub (execução 39537078620, manual); 48 testes da sonda sem rede; relatório comparativo na seção "Resultado da sonda"; classes: ok, ok_requer_chave, erro_http_4xx, erro_servidor_5xx, falha_tls, falha_dns, falha_conexao, timeout, erro_ftp, erro_inesperado*
+- [x] **Pausa depois da sonda:** se IBGE, SICONFI ou TSE estiver inacessível a partir do runner, a task para e o plano é revisto com o Bruno antes de construir o resto.
+      — *IBGE, SICONFI e TSE (14 de 14 endereços) respondem a partir do runner: a condição de bloqueio não ocorreu; a task só segue para o passo 2 com o "de acordo" do Bruno*
 - [ ] **429:** o cliente HTTP inclui 429 nas tentativas, respeita `Retry-After` e o SICONFI usa 1 s entre consultas e até 5 tentativas (teste da configuração).
 - [ ] **`estado_fontes.json`** com as 9 fontes (`ultimo_periodo_coletado`, `marca_sentinela`, `verificado_em`, `coletado_em`, `status`, `falhas_consecutivas`, `mensagem_erro`, `proxima_divulgacao`), schema validado por teste (`status` em ok/erro/defasado/suspeito, datas ISO em UTC, chave desconhecida recusada) e escrita atômica.
 - [ ] **Sentinelas** das 9 fontes testadas com respostas reais gravadas; o TSE com datas congeladas (31/12/2026 → governador 2022; 01/01/2027 → governador 2026; prefeito 2024 até 31/12/2028); `ELEICOES` do coletor deixa de ser fixo.
@@ -68,7 +70,7 @@ Coleta quando: não há estado da fonte (1ª execução), a `marca` mudou, passo
 - 2FA e custódia da conta GitHub (pendência do Bruno).
 
 ## Plano
-- [ ] 1. Sonda de alcance: lógica, linha de comando, `alcance.yml`, execução local e no GitHub, relatório comparativo. **PAUSA para o Bruno.**
+- [x] 1. Sonda de alcance: lógica, linha de comando, `alcance.yml`, execução local e no GitHub, relatório comparativo. **PAUSA para o Bruno.**
 - [ ] 2. Tratamento do 429 no `ClienteHTTP` e ritmo do SICONFI.
 - [ ] 3. Schema e módulo de estado (`estado_fontes.json`).
 - [ ] 4. Sentinelas das 9 fontes, com respostas reais gravadas.
@@ -86,6 +88,27 @@ Coleta quando: não há estado da fonte (1ª execução), a `marca` mudou, passo
 - **S14:** ações de terceiros fixadas por commit; dependências do lock.
 - **S15/S22:** exceções específicas, mensagens truncadas, nenhum valor sensível nos logs.
 - Demais: N/A (sem login, upload ou servidor próprio).
+
+## Resultado da sonda (21/10/2026)
+Local = Mac do Bruno (21/10, 00h07 em Brasília); GitHub = runner `ubuntu-latest` (Ubuntu 24.04, Python 3.11.17), execução 39537078620, 1 minuto de Actions. Comparação: **23 `ok_nos_dois`, 3 `inacessivel_nos_dois`, 0 `bloqueio_rede_runner`**.
+
+| Fonte | Endereços | Local | GitHub | Observação |
+|---|---|---|---|---|
+| IBGE (periodos de 6 agregados, dados, municípios, calendário) | 9 | 9 ok (227–432 ms) | 9 ok (629–851 ms) | cadeia TLS com o intermediário da Sectigo funciona no runner |
+| SICONFI (RREO, RGF, extrato de entregas) | 3 | 3 ok | 3 ok | o RGF é o mais lento (2,4 s nos dois) |
+| TSE (zips de 2022 e 2024, HEAD) | 2 | 2 ok | 2 ok | |
+| Comex Stat | 2 | 2 ok | 2 ok | |
+| DEMAS (API da Saúde) | 2 | 2 ok | 2 ok | |
+| Tesouro Transparente (CKAN do CAPAG) | 1 | ok | ok | o `curl` do Mac tinha levado reset; com o cliente do projeto responde 200 |
+| CGU (transferências) | 1 | 401 esperado | 401 esperado | alcançável; exige a chave gratuita |
+| FTP do CAGED (PDET) e do DATASUS (SIM e CNES) | 3 | 3 ok (1,6–1,9 s) | 3 ok (1,9–2,7 s) | login anônimo e listagem funcionam no runner |
+| **Inep** (Ideb, Censo Escolar, rendimento) | 3 | **3 falham** | **3 falham** | ver abaixo; **não é bloqueio do runner** |
+
+**Inep:** o servidor `download.inep.gov.br` envia só o certificado do site (1 certificado), sem o intermediário "RNP ICPEdu GR46 OV TLS CA 2025"; o `curl` do macOS completa a cadeia sozinho e o Python não (`CERTIFICATE_VERIFY_FAILED`), o mesmo defeito do IBGE. Verificado com `openssl`: o intermediário (baixado do campo CA Issuers do próprio certificado) é assinado pela **GlobalSign Root R46, que já está no certifi**, e fecha a cadeia (`openssl verify` = OK; SHA-256 do certificado `E1:07:47:D4:DA:7B:AB:09:CB:A9:95:2F:01:9D:35:34:CB:9F:BA:07:0B:F1:3D:87:91:B1:69:9C:D2:FF:59:DD`). Sem verificação de TLS (só diagnóstico, fora do repositório) o servidor responde 200 em 3 de 3 tentativas. Além disso, a **primeira conexão de cada execução recebe `reset`** e as seguintes falham no TLS; o padrão é igual no Mac e no GitHub. Conclusão: a task 41 precisa levar o intermediário para `src/coletor_base/certs/` (como o da Sectigo) e o cliente precisa tentar de novo no `reset`.
+
+## Achados durante a construção da sonda
+- No urllib3 atual, `NewConnectionError` descende de `ConnectTimeoutError` e de `TimeoutError`: uma conexão recusada ou uma falha de DNS seria classificada como `timeout`. A classificação testa essas exceções antes do timeout, e `falha_dns` virou classe própria (testes para os dois casos).
+- Um único pedido por endereço pode pegar um `reset` passageiro (caso do Inep). Recomendação para o Bruno aprovar: uma nova tentativa só em `falha_conexao` e `timeout`, registrada em `tentativas`, para o `bloqueio_rede_runner` não nascer de um erro passageiro. Não foi feita por mudar a spec aprovada ("1 requisição leve cada").
 
 ## Verificação
 ```bash
