@@ -1,0 +1,28 @@
+[project]
+name = "painel-to-em-dados"
+version = "0.1.0"
+description = "Painel de indicadores de políticas públicas do Tocantins — projeto de extensão PIBIEX/Unitins"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S", "RUF"]
+# S608 (SQL por interpolação) fica ATIVO de propósito: o projeto proíbe
+# concatenação de string em SQL (regra do 01_system_prompt.md).
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]  # assert é a linguagem do pytest
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q --strict-markers"
+
+[tool.coverage.run]
+source = ["src"]

@@ -1,0 +1,69 @@
+"""Leitura comum do CSV de candidatos do TSE (consulta_cand) — usada pelo TO-GER-01 (Task 30).
+
+Minimização (RNF-S05): só as colunas de COLUNAS saem da extração — CPF, e-mail, título e
+nascimento nunca. Só o titular eleito do cargo entra; vice e não eleito ficam de fora (RF-11).
+"""
+
+import csv
+import io
+import zipfile
+from typing import Any
+
+from src.coletor_base.http import ClienteHTTP
+
+URL_TSE = "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_{ano}.zip"
+ELEICOES = {"PREFEITO": 2024, "GOVERNADOR": 2022}  # eleição mais recente de cada cargo
+COLUNAS = [
+    "ANO_ELEICAO",
+    "SG_UF",
+    "SG_UE",
+    "DS_CARGO",
+    "SQ_CANDIDATO",
+    "NM_URNA_CANDIDATO",
+    "DS_SIT_TOT_TURNO",
+]
+
+
+def eh_titular_to(linha: dict[str, str]) -> bool:
+    return (
+        linha["SG_UF"] == "TO"
+        and linha["DS_CARGO"] in ELEICOES
+        and linha["DS_SIT_TOT_TURNO"] == "ELEITO"
+    )
+
+
+def baixar_titulares(http: ClienteHTTP) -> bytes:
+    """Baixa os zips do TSE e devolve o CSV minimizado (UTF-8, ';') só com os titulares do TO."""
+    saida = io.StringIO()
+    escritor = csv.DictWriter(saida, COLUNAS, delimiter=";", extrasaction="ignore")
+    escritor.writeheader()
+    for cargo, ano in ELEICOES.items():
+        with zipfile.ZipFile(io.BytesIO(http.get(URL_TSE.format(ano=ano)))) as z:
+            texto = z.read(f"consulta_cand_{ano}_TO.csv").decode("latin-1")
+        linhas = csv.DictReader(io.StringIO(texto), delimiter=";")
+        escritor.writerows(r for r in linhas if eh_titular_to(r) and r["DS_CARGO"] == cargo)
+    return saida.getvalue().encode("utf-8")
+
+
+def ler_titulares(bruto: bytes) -> list[dict[str, str]]:
+    leitor = csv.DictReader(io.StringIO(bruto.decode("utf-8")), delimiter=";")
+    return [r for r in leitor if eh_titular_to(r)]
+
+
+def montar_registro(
+    r: dict[str, str], id_municipio: str | None, agora: str, id_fonte: str
+) -> dict[str, Any]:
+    prefeito = r["DS_CARGO"] == "PREFEITO"
+    return {
+        "id_titular": f"PREFEITO:{id_municipio}" if prefeito else "GOVERNADOR:TO",
+        "id_municipio": id_municipio if prefeito else None,
+        "cargo": r["DS_CARGO"],
+        "nome_titular": r["NM_URNA_CANDIDATO"].strip(),
+        "ano_eleicao": int(r["ANO_ELEICAO"]),
+        "sq_candidato": r["SQ_CANDIDATO"],
+        "url_foto": None,  # TO-GER-02 bloqueada por RF-71: o retrato não é coletado
+        "fonte": "TSE",
+        "id_fonte": id_fonte,
+        "qualidade": "ok",
+        "atualizado_em": agora,
+    }

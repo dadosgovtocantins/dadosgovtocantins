@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Ambiente e segredos — NADA aqui vai para um repositório público
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+# Certificado PÚBLICO (intermediário da Sectigo que o IBGE não envia): sem ele toda coleta do IBGE falha
+!src/coletor_base/certs/*.pem
+credentials.json
+service-account*.json
+client_secret*.json
+
+# Ferramentas de agente (não fazem parte do produto)
+.claude/
+CLAUDE.md
+.claude-flow/
+.swarm/
+.agents/
+ruvector.db
+.mcp.json
+
+# Dados locais — a zona bruta nunca vai para o git. Âncora "/" = só na raiz: "data/" sem barra
+# também ignorava src/ui/data/ (painel_dados.json, painel_indicadores.json, municipios_to.json).
+/data/
+/data_raw/
+/.data_raw/
+*.dbc
+*.dbf
+*.csv
+!tests/fixtures/**/*.csv
+
+# Artefatos que ficam só no disco local (reunião, versão antiga do painel)
+/index-antigo.html
+/Painel Palmas (standalone).html
+/apresentacao_painel_to.pptx
+/apresentacao_painel_to.html
+
+# SO / editor
+.DS_Store
+# Arquivos de trava temporários do Office (criados enquanto o .pptx/.docx está aberto)
+~$*
+.idea/
+.vscode/

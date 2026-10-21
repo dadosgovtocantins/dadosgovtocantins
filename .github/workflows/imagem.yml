@@ -1,0 +1,30 @@
+name: Imagem Docker
+
+# SÓ MANUAL (Actions > Imagem Docker > Run workflow). Motivo (conferido em 21/10/2026): o Dockerfile roda
+# "pytest" dentro do build copiando só src/, tests/, pyproject.toml, README.md e LICENSE; a suíte atual também
+# precisa de scripts/, docs/ e index.html, então o build falha na coleta dos testes. Além disso a coleta roda
+# direto no GitHub Actions (design 33): o Cloud Run, que usaria esta imagem, não está em uso (exige faturamento).
+# Antes de ligar de novo no push: corrigir o Dockerfile (copiar o que os testes precisam ou tirar o pytest do build).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  imagem:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Build da imagem
+        run: docker build -t painel-to:ci .
+
+      - name: Scan de vulnerabilidades da imagem (Trivy)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: painel-to:ci
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true

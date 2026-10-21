@@ -1,0 +1,14 @@
+{
+ "itens": [
+  {
+   "cod_ibge": 1700251,
+   "exercicio": 2024,
+   "valor": 29498406.45
+  },
+  {
+   "cod_ibge": 1700251,
+   "exercicio": 2025,
+   "valor": 34960559.96
+  }
+ ]
+}

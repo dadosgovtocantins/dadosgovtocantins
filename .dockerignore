@@ -1,0 +1,15 @@
+.venv/
+.git/
+.github/
+.planning/
+.claude/
+.claude-flow/
+.swarm/
+.agents/
+ruvector.db
+docs/
+infra/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/
+.env*

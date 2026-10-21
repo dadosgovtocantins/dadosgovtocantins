@@ -1,0 +1,31 @@
+/* Design Tokens - Painel TO em Dados (Task 05 / Task 12) */
+:root {
+    /* Cores de Fundo e Superfície */
+    --color-bg-main: #F8FAFC;
+    --color-surface: #FFFFFF;
+    --color-border: #E2E8F0;
+    
+    /* Tipografia */
+    --color-text-primary: #0F172A;
+    --color-text-secondary: #475569;
+    --color-text-muted: #64748B;
+    
+    /* Marca e Interações */
+    --color-accent-primary: #0284C7;
+    --color-accent-hover: #0369A1;
+    
+    /* Variação e Alertas */
+    --color-positive: #15803D;
+    --color-negative: #B91C1C;
+    --color-warning: #D97706;
+    
+    /* Badges de Esfera */
+    --color-esfera-fed: #1E40AF;
+    --color-esfera-est: #065F46;
+    
+    /* Tipografia e Raios */
+    --font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --radius-card: 12px;
+    --radius-badge: 6px;
+    --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+}

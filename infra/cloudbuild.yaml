@@ -1,0 +1,54 @@
+# Esteira de deploy. Regra que o pipeline aplica (PRD 11.1):
+#   push em `hml` -> deploy em HML
+#   tag v*        -> deploy em PROD
+# Nenhum coletor chega a PROD sem ter passado por HML: a tag só é criada a
+# partir de um commit que já rodou em homologação.
+substitutions:
+  _REGIAO: southamerica-east1
+  _AMBIENTE: hml
+  _IMAGEM: painel-to
+
+steps:
+  - id: testes
+    name: python:3.11-slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        pip install --index-url https://pypi.org/simple -r requirements.lock.txt pytest ruff
+        ruff check src tests
+        pytest -q
+
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGIAO}-docker.pkg.dev/$PROJECT_ID/${_IMAGEM}/${_IMAGEM}:$SHORT_SHA
+      - .
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGIAO}-docker.pkg.dev/$PROJECT_ID/${_IMAGEM}/${_IMAGEM}:$SHORT_SHA
+
+  - id: deploy-job
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - update
+      - coletor-${_AMBIENTE}
+      - --image=${_REGIAO}-docker.pkg.dev/$PROJECT_ID/${_IMAGEM}/${_IMAGEM}:$SHORT_SHA
+      - --region=${_REGIAO}
+      - --service-account=sa-coletor-${_AMBIENTE}@$PROJECT_ID.iam.gserviceaccount.com
+      - --labels=projeto=painel-to,ambiente=${_AMBIENTE},modulo=ingestao
+      - --max-retries=1
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  # Nível gratuito: máquina padrão, sem upgrade de CPU no build.
+  machineType: E2_HIGHCPU_8
+timeout: 1200s

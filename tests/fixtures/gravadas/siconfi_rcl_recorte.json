@@ -1,0 +1,34 @@
+{
+ "itens": [
+  {
+   "cod_ibge": 17,
+   "exercicio": 2024,
+   "valor": 14655407399.67
+  },
+  {
+   "cod_ibge": 1721000,
+   "exercicio": 2024,
+   "valor": 2045511039.51
+  },
+  {
+   "cod_ibge": 1702109,
+   "exercicio": 2024,
+   "valor": 907300855.98
+  },
+  {
+   "cod_ibge": 17,
+   "exercicio": 2025,
+   "valor": 15568042573.26
+  },
+  {
+   "cod_ibge": 1721000,
+   "exercicio": 2025,
+   "valor": 2155602779.72
+  },
+  {
+   "cod_ibge": 1702109,
+   "exercicio": 2025,
+   "valor": 1030326231.24
+  }
+ ]
+}
