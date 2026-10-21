@@ -73,3 +73,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python scripts/sincronizar_issues.py
+
+      - name: Publicar o site no repositório público
+        if: ${{ !cancelled() && steps.atualizar.outcome == 'success' }}
+        env:
+          # Token fine-grained só do repositório público, só "contents: write". Sem ele a publicação fica desligada.
+          PAT_PUBLICACAO_PAINEL: ${{ secrets.PAT_PUBLICACAO_PAINEL }}
+          PADRAO_EMAIL_INFRA: ${{ secrets.PADRAO_EMAIL_INFRA }}
+          REPOSITORIO_PUBLICO: dadosgovtocantins/painel
+        run: |
+          set -euo pipefail
+          if [ -z "${PAT_PUBLICACAO_PAINEL}" ]; then
+            echo "Publicação desligada: o segredo PAT_PUBLICACAO_PAINEL não existe."
+            exit 0
+          fi
+          bash scripts/publicar_site.sh "https://github.com/${REPOSITORIO_PUBLICO}.git" main

@@ -58,6 +58,6 @@ def test_arquivos_do_painel_tem_versao_pelo_conteudo():
     mudou o arquivo, muda o endereço e o navegador busca de novo."""
     raiz = Path(__file__).parents[2]
     html = (raiz / "index.html").read_text("utf-8")
-    for rel in ("src/ui/painel-logica.js", "src/ui/css/painel.css"):
+    for rel in ("src/ui/painel-logica.js", "src/ui/css/painel.css", "support.js"):
         v = hashlib.sha256((raiz / rel).read_bytes()).hexdigest()[:8]
         assert f'"./{rel}?v={v}"' in html, f"atualize no index.html: ./{rel}?v={v}"

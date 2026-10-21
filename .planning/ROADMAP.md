@@ -68,6 +68,7 @@ Legenda de status: `pendente` · `em andamento` · `concluída` · `cortada`
 | 33 | `design_automacao_coleta` | — | — | RF-60..RF-68, RF-82 | ✅ design | **aprovado (21/10/2026); tasks 35 a 45 ainda por escrever** |
 | 34 | `primeiro_envio_github` | — | — | RNF-S03, §12.4 | ✅ escrita | **concluída (21/10/2026)** |
 | 35 | `orquestrador_diario` | — | — | RF-60..RF-68, RF-82 | ✅ escrita | **concluída (21/10/2026)** |
+| 36 | `painel_publico` | — | — | RNF-S03, RF-60..RF-68 | ✅ escrita | **passos locais prontos (21/10/2026); parado antes de publicar: o Bruno cria `dadosgovtocantins/painel` e o token `PAT_PUBLICACAO_PAINEL`** |
 
 *(Numeração começa em 02 e nunca é reaproveitada — task cortada mantém o número
 com `status: cortada` e o motivo escrito.)*

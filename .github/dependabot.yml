@@ -1,0 +1,14 @@
+# Atualizações semanais de dependências (S14). O Dependabot lê requirements.txt; o lock
+# (requirements.lock.txt) é regenerado a partir dele (ver o cabeçalho do próprio lock).
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5

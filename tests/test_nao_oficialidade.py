@@ -33,7 +33,10 @@ def test_readme_nao_usa_simbolo_oficial_do_estado():
         assert termo not in readme, f"termo proibido no README: {termo}"
 
 
-def test_conta_projeto_nunca_aparece_em_texto_publico():
-    """dadosgovtocantins@ é conta de infraestrutura e nunca pode ser exposta (PRD 2.3)."""
-    for arquivo in [RAIZ / "README.md", RAIZ / "LICENSE"]:
-        assert "dadosgovtocantins" not in arquivo.read_text(encoding="utf-8")
+def test_email_da_conta_de_infraestrutura_nunca_aparece_em_texto_publico():
+    """O e-mail da conta de infraestrutura nunca pode ser exposto (PRD 2.3, RNF-S08). O NOME da conta e o
+    endereço do painel são públicos por escolha do Bruno (task 36): o que se proíbe é o e-mail, isto é, o
+    nome da conta seguido de "@". O padrão completo (local, segredo do CI) é conferido por varrer_segredos.sh."""
+    publicos = [RAIZ / "README.md", RAIZ / "LICENSE", RAIZ / "index.html"]
+    for arquivo in publicos:
+        assert "dadosgovtocantins@" not in arquivo.read_text(encoding="utf-8").lower(), arquivo.name

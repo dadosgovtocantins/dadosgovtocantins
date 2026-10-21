@@ -120,6 +120,57 @@
     return { nome: nomeProprio(nome), legenda: ano + "Fonte: TSE" };
   }
 
-  globalThis.PainelLogica = { fmt, escalaMoeda, dadoDe, variacao, spark, cartao, montarBlocos, aviso, montarTelas, projetar, titular };
+  // Situação das fontes (estado_fontes.json, escrito pelo robô diário) -> dados do rodapé, ou null se o arquivo não servir.
+  // O texto de status e o ícone dizem a situação; a cor só reforça. Mensagens de erro vão como texto, nunca como HTML.
+  const FONTES_ROTULO = {
+    "TO-TER-01": ["População residente", "IBGE"],
+    "TO-TER-02": ["PIB dos municípios", "IBGE"],
+    "TO-TER-03": ["PIB do estado", "IBGE"],
+    "TO-TER-04": ["Área territorial", "IBGE"],
+    "TO-TER-05": ["Produção agrícola municipal", "IBGE"],
+    "TO-TER-06": ["Pecuária municipal (rebanho bovino)", "IBGE"],
+    "TO-TER-07": ["Taxa de desocupação", "IBGE"],
+    "TO-REC-02": ["Receita corrente líquida", "Tesouro Nacional"],
+    "TO-GER-01": ["Prefeitos e governador eleitos", "TSE"],
+  };
+  const STATUS_FONTE = {
+    ok: { rotulo: "Atualizada", icone: "ph-check-circle" },
+    defasado: { rotulo: "Defasada", icone: "ph-clock-countdown" },
+    erro: { rotulo: "Com falha", icone: "ph-warning" },
+    suspeito: { rotulo: "Em análise", icone: "ph-magnifying-glass" },
+  };
+
+  const dataHoraBrasilia = (iso) => {
+    const d = new Date(iso);
+    if (typeof iso !== "string" || isNaN(d)) return null;
+    const p = Object.fromEntries(new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
+      .formatToParts(d).map((x) => [x.type, x.value]));
+    return p.day + "/" + p.month + "/" + p.year + " às " + p.hour + ":" + p.minute;
+  };
+
+  // "2023" -> "2023"; "202602" (trimestre) -> "2º trim. 2026"; ausente -> "sem dado".
+  const periodoFonte = (p) => (typeof p !== "string" || !p ? "sem dado" : /^\d{6}$/.test(p) ? Number(p.slice(4)) + "º trim. " + p.slice(0, 4) : p);
+
+  function situacaoFontes(estado) {
+    if (!estado || typeof estado !== "object" || !estado.fontes || typeof estado.fontes !== "object") return null;
+    const verificado = dataHoraBrasilia(estado.ultima_execucao_orquestrador);
+    if (!verificado) return null;
+    const itens = Object.keys(FONTES_ROTULO).map((id) => {
+      const f = estado.fontes[id];
+      const st = f && STATUS_FONTE[f.status] ? f.status : "erro";
+      const msg = f && st !== "ok" && typeof f.mensagem_erro === "string" ? f.mensagem_erro.slice(0, 300) : "";
+      return {
+        id, nome: FONTES_ROTULO[id][0], orgao: FONTES_ROTULO[id][1], status: st,
+        statusRotulo: STATUS_FONTE[st].rotulo, icone: STATUS_FONTE[st].icone,
+        periodo: periodoFonte(f && f.ultimo_periodo_coletado), mensagem: msg, temMensagem: !!msg,
+      };
+    });
+    const ok = itens.filter((i) => i.status === "ok").length;
+    const resumo = ok === itens.length ? ok + " de " + itens.length + " fontes atualizadas"
+      : ok + " de " + itens.length + " fontes atualizadas, " + (itens.length - ok) + " com atenção";
+    return { verificado, resumo, todasOk: ok === itens.length, itens };
+  }
+
+  globalThis.PainelLogica = { fmt, escalaMoeda, dadoDe, variacao, spark, cartao, montarBlocos, aviso, montarTelas, projetar, titular, situacaoFontes };
   if (typeof module !== "undefined") module.exports = globalThis.PainelLogica;
 })();

@@ -3,17 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- CSP por meta (o GitHub Pages não deixa configurar cabeçalhos): só o próprio site. 'unsafe-eval' é do runtime
+       x-dc, que monta o componente a partir do <script type="text/plain">; sem script nem estilo de terceiros. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
   <title>Painel TO em Dados</title>
-  <!-- ?v= = início do SHA-256 do arquivo (evita .js/.css velho no cache); tests/ui/test_tela_municipio.py confere -->
-  <script src="./src/ui/painel-logica.js?v=14a9517c"></script>
-  <script src="./support.js"></script>
+  <!-- ?v= = início do SHA-256 do arquivo (evita .js/.css velho no cache); tests/ui/test_tela_municipio.py confere (painel-logica.js, painel.css e support.js) -->
+  <script src="./src/ui/painel-logica.js?v=28cd9109"></script>
+  <script src="./support.js?v=a1d293c3"></script>
 </head>
 <body>
 <x-dc>
   <sc-helmet>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap">
-    <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
-    <link rel="stylesheet" href="./src/ui/css/painel.css?v=0135de29">
+    <link rel="stylesheet" href="./src/ui/vendor/inter/fonts.css">
+    <link rel="stylesheet" href="./src/ui/vendor/phosphor/style.css">
+    <link rel="stylesheet" href="./src/ui/css/painel.css?v=584b5dd1">
   </sc-helmet>
 
   <div class="painel" data-visao="{{ aba }}" data-tema="{{ tema }}" data-densidade="{{ densidade }}">
@@ -142,7 +145,24 @@
       </div>
 
       <footer class="rodape">
+        <sc-if value="{{ situacao }}">
+          <details class="fontes">
+            <summary><i class="ph ph-clock" aria-hidden="true"></i><span>Última verificação das fontes: {{ situacao.verificado }} (horário de Brasília) · {{ situacao.resumo }}</span></summary>
+            <ul class="fontes-lista">
+              <sc-for list="{{ situacao.itens }}" as="f">
+                <li class="fonte">
+                  <span class="fonte-nome">{{ f.nome }}<span class="fonte-orgao">{{ f.orgao }}</span></span>
+                  <span class="fonte-status" data-status="{{ f.status }}"><i class="ph {{ f.icone }}" aria-hidden="true"></i>{{ f.statusRotulo }}</span>
+                  <span class="fonte-periodo">Dado de {{ f.periodo }}</span>
+                  <sc-if value="{{ f.temMensagem }}"><span class="fonte-msg">{{ f.mensagem }}</span></sc-if>
+                </li>
+              </sc-for>
+            </ul>
+          </details>
+        </sc-if>
+        <sc-if value="{{ situacaoIndisponivel }}"><p>Situação das fontes indisponível no momento.</p></sc-if>
         <p>Projeto acadêmico independente de pesquisa e extensão (Unitins/PIBIEX), sem vínculo com o Governo do Estado do Tocantins. População: IBGE, Censo Demográfico 2022. Os indicadores vêm direto do IBGE e do Tesouro Nacional; “Não coletado” indica que a coleta automática ainda não existe. {{ rodapeDados }}</p>
+        <p>Os nomes de prefeitos e do governador vêm da base pública oficial do Tribunal Superior Eleitoral (TSE) e se referem exclusivamente a ocupantes de cargos públicos eletivos, divulgados nos termos da Lei de Acesso à Informação (Lei nº 12.527/2011).</p>
       </footer>
     </div>
   </div>
@@ -225,6 +245,9 @@ class Component extends DCLogic {
     this.carregar("./src/ui/data/painel_indicadores.json", (d) => this.dadosValidos(d),
       (dados) => ({ dados }),
       (msg) => ({ dadosErro: "Não foi possível carregar os indicadores (" + msg + ")." }));
+    this.carregar("./src/ui/data/estado_fontes.json", (d) => !!PainelLogica.situacaoFontes(d),
+      (estadoFontes) => ({ estadoFontes }),
+      () => ({ estadoFontesErro: true }));
     this.carregar("./src/ui/data/painel_dados.json", (d) => !!d && ["fontes", "estado", "municipios"].every((k) => !!d[k] && typeof d[k] === "object"),
       (dadosReais) => ({ dadosReais }),
       (msg) => ({ dadosReaisErro: "Dados reais não carregados (" + msg + "). Rode scripts/exportar_painel.py." }));
@@ -418,6 +441,8 @@ class Component extends DCLogic {
       mapaOculto: this.state.formas === null || !noMunicipio,
       mapaErro: this.state.mapaErro,
       rodapeDados: this.dataColeta(),
+      situacao: PainelLogica.situacaoFontes(this.state.estadoFontes),
+      situacaoIndisponivel: !!this.state.estadoFontesErro,
       tituloCorpo: titulo,
       avisoDados: aviso,
       aoClicar: this.aoClicar, aoTeclar: this.aoTeclar,
