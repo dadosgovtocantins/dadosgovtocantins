@@ -10,6 +10,7 @@ import json
 import socket
 import ssl
 import threading
+from collections import Counter
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import SimpleNamespace
@@ -35,15 +36,22 @@ CAMPOS = {
     "classe",
     "erro",
     "detalhe",
+    "tentativas",
 }
 
 
 class Manipulador(BaseHTTPRequestHandler):
+    pedidos: ClassVar[Counter] = Counter()
+
     def log_message(self, *args):  # silencia o log do servidor de teste
         pass
 
     def _responder(self, metodo: str):
         caminho = self.path.split("?")[0]
+        self.pedidos[caminho] += 1
+        if caminho == "/reseta-uma-vez" and self.pedidos[caminho] == 1:
+            self.close_connection = True  # sem resposta: o cliente vê a conexão derrubada (reset)
+            return
         if caminho == "/lento":
             threading.Event().wait(2.0)
         if caminho == "/redireciona":
@@ -192,6 +200,61 @@ def test_erro_vem_resumido_e_sem_quebra_de_linha():
     assert isinstance(r["erro"], str) and len(r["erro"]) <= 160 and "\n" not in r["erro"]
 
 
+# --- nova tentativa (1 retry, só em falha_conexao e timeout) -------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _zera_pedidos():
+    Manipulador.pedidos.clear()
+
+
+def test_reset_passageiro_e_recuperado_na_segunda_tentativa(servidor):
+    r = alcance.sondar(_alvo(f"http://{servidor}/reseta-uma-vez"), timeout=3, pausa_s=0)
+    assert (r["classe"], r["acessivel"], r["tentativas"]) == ("ok", True, 2)
+    assert Manipulador.pedidos["/reseta-uma-vez"] == 2
+
+
+def test_timeout_e_conexao_recusada_tentam_duas_vezes_e_registram():
+    for url, classe in ((f"http://127.0.0.1:{_porta_fechada()}/x", "falha_conexao"),):
+        r = alcance.sondar(_alvo(url), timeout=1, pausa_s=0)
+        assert (r["classe"], r["tentativas"]) == (classe, 2)
+
+
+def test_timeout_repetido_conta_duas_tentativas(servidor):
+    r = alcance.sondar(_alvo(f"http://{servidor}/lento"), timeout=0.3, pausa_s=0)
+    assert (r["classe"], r["tentativas"]) == ("timeout", 2)
+    assert Manipulador.pedidos["/lento"] == 2
+
+
+@pytest.mark.parametrize("caminho", ["/ok", "/403", "/404", "/500"])
+def test_resposta_http_nao_repete(servidor, caminho):
+    r = alcance.sondar(_alvo(f"http://{servidor}{caminho}"), timeout=3, pausa_s=0)
+    assert r["tentativas"] == 1 and Manipulador.pedidos[caminho] == 1
+
+
+def test_tls_e_dns_nao_repetem(servidor):
+    assert alcance.sondar(_alvo(f"https://{servidor}/ok"), timeout=3, pausa_s=0)["tentativas"] == 1
+
+
+def test_ftp_com_falha_passageira_e_recuperado():
+    class FtpInstavel(FtpFalso):
+        chamadas: ClassVar[int] = 0
+
+        def __init__(self, host, timeout=None):
+            type(self).chamadas += 1
+            if type(self).chamadas == 1:
+                raise EOFError("conexão encerrada")
+            super().__init__(host, timeout)
+
+    r = alcance.sondar(_ftp(), timeout=3, fabrica_ftp=FtpInstavel, pausa_s=0)
+    assert (r["classe"], r["tentativas"]) == ("ok", 2)
+
+
+def test_erro_de_ftp_de_protocolo_nao_repete():
+    FtpFalso.falha = __import__("ftplib").error_perm("530 Login incorrect")
+    assert alcance.sondar(_ftp(), timeout=3, fabrica_ftp=FtpFalso, pausa_s=0)["tentativas"] == 1
+
+
 # --- FTP simulado -------------------------------------------------------------------------------
 
 
@@ -273,10 +336,16 @@ def test_executar_um_alvo_ruim_nao_derruba_os_demais(servidor):
         _alvo(f"http://127.0.0.1:{_porta_fechada()}/x"),
         _ftp(),
     ]
-    rel = alcance.executar(alvos, timeout=2, origem="teste", fabrica_ftp=FtpFalso)
+    rel = alcance.executar(alvos, timeout=2, origem="teste", fabrica_ftp=FtpFalso, pausa_s=0)
     assert len(rel["resultados"]) == 4 and rel["origem"] == "teste"
     assert all(set(r) == CAMPOS for r in rel["resultados"])
     assert [r["acessivel"] for r in rel["resultados"]] == [True, False, False, True]
+    assert [r["tentativas"] for r in rel["resultados"]] == [
+        1,
+        1,
+        2,
+        1,
+    ]  # só a conexão recusada repetiu
     assert rel["resumo"]["total"] == 4 and rel["resumo"]["acessiveis"] == 2
     assert rel["resumo"]["por_classe"] == {"ok": 2, "erro_http_4xx": 1, "falha_conexao": 1}
     assert rel["gerado_em"].endswith("+00:00") or rel["gerado_em"].endswith("Z")

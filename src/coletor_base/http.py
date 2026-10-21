@@ -35,14 +35,24 @@ class ClienteHTTP:
     Cliente HTTP seguro com User-Agent identificado, rate limit auto-imposto e retries.
     """
 
-    def __init__(self, delay_segundos: float = 1.0, max_retries: int = 3):
+    def __init__(
+        self,
+        delay_segundos: float = 1.0,
+        max_retries: int = 3,
+        backoff_factor: float = 1.5,
+        retry_after_max: float = 120,
+    ):
         self.delay_segundos = delay_segundos
         self.user_agent = USER_AGENT_OFICIAL
 
+        # 429 (excesso de consultas, ex.: SICONFI) entra nas tentativas e o Retry-After do servidor é
+        # respeitado, mas nunca por mais de retry_after_max segundos (um servidor pedindo 1 hora não prende a coleta).
         retries = Retry(
             total=max_retries,
-            backoff_factor=1.5,
-            status_forcelist=[500, 502, 503, 504],
+            backoff_factor=backoff_factor,
+            status_forcelist=[429, 500, 502, 503, 504],
+            respect_retry_after_header=True,
+            retry_after_max=retry_after_max,
         )
         self.http = urllib3.PoolManager(
             retries=retries,

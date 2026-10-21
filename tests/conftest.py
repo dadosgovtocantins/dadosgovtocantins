@@ -2,15 +2,21 @@
 
 import io
 import json
+import re
 import zipfile
+from datetime import date
+from pathlib import Path
 
 import pytest
 from src.coletor_base.http import ClienteHTTP
-from src.coletores import siconfi
+from src.coletores import siconfi, tse_candidatos
 from tests.fixtures.governanca_payloads import CSV_TSE_TITULARES
 from tests.fixtures.ibge_payloads import (
+    fixture_calendario,
+    fixture_extrato_siconfi,
     fixture_malha_territorial,
     fixture_pam,
+    fixture_periodos,
     fixture_pib_estadual,
     fixture_pib_municipal,
     fixture_pnadc,
@@ -18,6 +24,8 @@ from tests.fixtures.ibge_payloads import (
     fixture_ppm,
 )
 from tests.fixtures.recursos_payloads import fixture_siconfi_rcl, fixture_siconfi_rgf
+
+GRAVADAS = Path(__file__).parent / "fixtures" / "gravadas"
 
 
 def _municipios(url: str) -> bytes:
@@ -67,6 +75,37 @@ def _tse(url: str) -> bytes:
     return saida.getvalue()
 
 
+def _historico(arquivo: str):
+    return lambda url: (GRAVADAS / arquivo).read_bytes()
+
+
+# Rotas que precisam de um teste mais fino que "contém o trecho": /agregados/N/periodos (lista de períodos)
+# também contém "/agregados/N/" da rota de dados.
+ROTAS_EXATAS = [
+    # histórico longo para o 3σ (src/orquestracao/historico.py): séries reais do estado
+    (
+        lambda url: "/agregados/6579/periodos/-30/" in url,
+        _historico("sidra_hist_populacao_estado.json"),
+    ),
+    (
+        lambda url: "/agregados/5938/periodos/-30/" in url,
+        _historico("sidra_hist_pib_estadual.json"),
+    ),
+    (
+        lambda url: "/agregados/4099/periodos/-80/" in url,
+        _historico("sidra_hist_desocupacao.json"),
+    ),
+    (
+        lambda url: re.search(r"/agregados/\d+/periodos$", url) is not None,
+        lambda url: fixture_periodos(re.search(r"/agregados/(\d+)/periodos$", url).group(1)),
+    ),
+    (lambda url: "/calendario/" in url, lambda url: fixture_calendario()),
+    (
+        lambda url: "extrato_entregas" in url,
+        lambda url: fixture_extrato_siconfi(int(url.split("an_referencia=")[1].split("&")[0])),
+    ),
+]
+
 # (trechos que a URL precisa conter, função que devolve a resposta gravada)
 ROTAS = [
     (("/agregados/6579/",), lambda url: fixture_populacao()),
@@ -93,6 +132,14 @@ def _sem_internet(monkeypatch):
     monkeypatch.setattr(ClienteHTTP, "get", bloqueado)
 
 
+@pytest.fixture(autouse=True)
+def _tse_em_2026(monkeypatch):
+    """As fixtures do TSE são das eleições de 2024 (prefeito) e 2022 (governador): vigentes até 31/12/2026.
+    Congela "hoje" para a suíte não quebrar na virada do governador (01/01/2027); os testes da data usam
+    eleicoes_vigentes() direto, com datas explícitas."""
+    monkeypatch.setattr(tse_candidatos, "hoje", lambda agora=None: date(2026, 10, 21))
+
+
 @pytest.fixture
 def rede_gravada(monkeypatch, tmp_path):
     """ClienteHTTP.get devolve a resposta gravada e a zona raw (.data_raw) vai para tmp_path."""
@@ -101,6 +148,9 @@ def rede_gravada(monkeypatch, tmp_path):
 
     def get(self, url, headers=None):
         chamadas.append(url)
+        for aceita, resposta in ROTAS_EXATAS:
+            if aceita(url):
+                return resposta(url)
         for trechos, resposta in ROTAS:
             if all(t in url for t in trechos):
                 return resposta(url)

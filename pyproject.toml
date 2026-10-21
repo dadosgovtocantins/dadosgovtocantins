@@ -14,7 +14,8 @@ src = ["src", "tests"]
 select = ["E", "F", "I", "UP", "B", "S", "RUF"]
 # S608 (SQL por interpolação) fica ATIVO de propósito: o projeto proíbe
 # concatenação de string em SQL (regra do 01_system_prompt.md).
-ignore = ["E501"]
+# RUF001-003: "σ" é o símbolo do desvio-padrão, usado de propósito nos textos em pt-BR.
+ignore = ["E501", "RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]  # assert é a linguagem do pytest

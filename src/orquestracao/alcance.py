@@ -13,7 +13,7 @@ import ssl
 from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from time import perf_counter
+from time import perf_counter, sleep
 from typing import Any
 from urllib.parse import unquote, urlsplit
 
@@ -251,6 +251,7 @@ def _registro(alvo: Alvo, protocolo: str, inicio: float, **campos: Any) -> dict[
         "classe": classe,
         "erro": _resumir_erro(erro),
         "detalhe": campos.get("detalhe"),
+        "tentativas": 1,
     }
 
 
@@ -283,12 +284,31 @@ def _sondar_ftp(alvo: Alvo, timeout: float, fabrica: Any) -> dict[str, Any]:
     return _registro(alvo, "ftp", inicio, erro_obj=erro, detalhe=detalhe)
 
 
+# Uma única nova tentativa, só para erro que pode ser passageiro (ex.: o Inep derruba a 1ª conexão com reset).
+# Resposta HTTP (mesmo 403), TLS, DNS e erro de protocolo FTP não repetem: não são passageiros.
+CLASSES_COM_NOVA_TENTATIVA = frozenset({"falha_conexao", "timeout"})
+
+
 def sondar(
-    alvo: Alvo, timeout: float = 15.0, http: Any = None, fabrica_ftp: Any = ftplib.FTP
+    alvo: Alvo,
+    timeout: float = 15.0,
+    http: Any = None,
+    fabrica_ftp: Any = ftplib.FTP,
+    pausa_s: float = 1.0,
 ) -> dict[str, Any]:
-    if alvo.metodo == "FTP":
-        return _sondar_ftp(alvo, timeout, fabrica_ftp)
-    return _sondar_http(alvo, http or _pool(timeout))
+    """Sonda um alvo (até 2 tentativas, ver CLASSES_COM_NOVA_TENTATIVA); `tentativas` registra quantas."""
+    http = http or _pool(timeout)
+
+    def uma_vez() -> dict[str, Any]:
+        if alvo.metodo == "FTP":
+            return _sondar_ftp(alvo, timeout, fabrica_ftp)
+        return _sondar_http(alvo, http)
+
+    resultado = uma_vez()
+    if resultado["classe"] in CLASSES_COM_NOVA_TENTATIVA:
+        sleep(pausa_s)
+        resultado = {**uma_vez(), "tentativas": 2}
+    return resultado
 
 
 def executar(
@@ -297,6 +317,7 @@ def executar(
     origem: str = "local",
     http: Any = None,
     fabrica_ftp: Any = ftplib.FTP,
+    pausa_s: float = 1.0,
 ) -> dict[str, Any]:
     alvos = list(ALVOS if alvos is None else alvos)
     ids = [a.id for a in alvos]
@@ -304,7 +325,7 @@ def executar(
     if repetidos:
         raise ValueError(f"ids repetidos na lista de alvos: {repetidos}")
     http = http or _pool(timeout)
-    resultados = [sondar(a, timeout, http, fabrica_ftp) for a in alvos]
+    resultados = [sondar(a, timeout, http, fabrica_ftp, pausa_s) for a in alvos]
     return {
         "gerado_em": datetime.now(UTC).isoformat(),
         "origem": origem,
@@ -369,7 +390,8 @@ def resumo_markdown(relatorio: dict[str, Any], comparacao: dict[str, Any] | None
     ]
     for x in relatorio["resultados"]:
         status = f" ({x['status_code']})" if x["status_code"] else ""
-        linha = f"| {x['id']} | {x['fonte']} | {x['uso']} | {x['classe']}{status} | {x['latencia_ms']} |"
+        extra = " (2 tentativas)" if x.get("tentativas", 1) > 1 else ""  # houve nova tentativa
+        linha = f"| {x['id']} | {x['fonte']} | {x['uso']} | {x['classe']}{status}{extra} | {x['latencia_ms']} |"
         if comp:
             c = comp.get(x["id"], {})
             linha += f" {c.get('classe_base') or '-'} | {c.get('comparacao', '-')} |"

@@ -46,3 +46,18 @@ def fixture_ppm() -> bytes:
 def fixture_pnadc() -> bytes:
     """SIDRA 4099, taxa de desocupação do TO, 3T2025 a 2T2026 (TO-TER-07)."""
     return _gravada("sidra_to_ter_07.json")
+
+
+def fixture_periodos(agregado: str) -> bytes:
+    """GET /agregados/{agregado}/periodos: lista de períodos e data de modificação (gravada em 2026-10-21)."""
+    return _gravada(f"ibge_periodos_{agregado}.json")
+
+
+def fixture_calendario() -> bytes:
+    """GET /calendario (21/10/2026 a 31/12/2027), recortado: PNAD Contínua trimestral (produto 9173) e 4 outros."""
+    return _gravada("ibge_calendario.json")
+
+
+def fixture_extrato_siconfi(ano: int) -> bytes:
+    """SICONFI extrato_entregas do estado (ente 17) no exercício, recortado para RREO e RGF (gravado em 2026-10-21)."""
+    return _gravada(f"siconfi_extrato_17_{ano}.json")

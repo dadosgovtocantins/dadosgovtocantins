@@ -16,14 +16,23 @@ URL_RREO = (
     "https://apidatalake.tesouro.gov.br/ords/siconfi/tt/rreo?an_exercicio={ano}&nr_periodo=6"
     "&co_tipo_demonstrativo=RREO&no_anexo=RREO-Anexo%2003&id_ente={ente}"
 )
+URL_EXTRATO = "https://apidatalake.tesouro.gov.br/ords/siconfi/tt/extrato_entregas?id_ente={ente}&an_referencia={ano}"
 URL_RGF = (
     "https://apidatalake.tesouro.gov.br/ords/siconfi/tt/rgf?an_exercicio={ano}&in_periodicidade={periodicidade}"
     "&nr_periodo={periodo}&co_tipo_demonstrativo={demonstrativo}&co_poder=E&no_anexo=RGF-Anexo%2001&id_ente={ente}"
 )
+# A API do Tesouro bloqueia (429) quem consulta demais: 1 s entre consultas e até 5 tentativas com espera crescente.
+ATRASO_ENTRE_CONSULTAS_S, MAX_TENTATIVAS = 1.0, 5
 CONTA_RREO, COLUNA_RREO = "RREO3ReceitaCorrenteLiquida", "TOTAL (ÚLTIMOS 12 MESES)"
 CONTA_RGF, COLUNA_RGF = "ReceitaCorrenteLiquidaLimiteLegal", "Valor"
 # (periodicidade, período, demonstrativo): semestral simplificado primeiro (é o caso dos municípios pequenos).
 RGF_ALTERNATIVAS = [("S", 2, "RGF%20Simplificado"), ("Q", 3, "RGF")]
+
+
+def exercicios_alvo(ano_atual: int, quantidade: int = 3) -> range:
+    """Exercícios fechados que o coletor lê: o ano passado e os anteriores (a sentinela olha os mesmos)."""
+    ultimo = ano_atual - 1
+    return range(ultimo - quantidade + 1, ultimo + 1)
 
 
 def _rcl(
@@ -41,10 +50,12 @@ def coletar_rcl(exercicios: int = 3) -> bytes:
     A zona raw guarda só a linha da RCL de cada ente (a resposta completa tem ~100 KB por ente)
     e a origem do valor ("RREO" ou "RGF"); ente sem nenhum dos dois não gera item (RF-55).
     """
-    http = ClienteHTTP(delay_segundos=0.5)
+    http = ClienteHTTP(
+        delay_segundos=ATRASO_ENTRE_CONSULTAS_S, max_retries=MAX_TENTATIVAS, backoff_factor=2.0
+    )
     entes = ["17", *(str(m["id"]) for m in json.loads(http.get(URL_MUNICIPIOS)))]
-    ultimo, itens = datetime.now(UTC).year - 1, []
-    for ano in range(ultimo - exercicios + 1, ultimo + 1):
+    itens = []
+    for ano in exercicios_alvo(datetime.now(UTC).year, exercicios):
         for ente in entes:
             achados = _rcl(
                 http, URL_RREO.format(ano=ano, ente=ente), CONTA_RREO, COLUNA_RREO, f"{ente}/{ano}"

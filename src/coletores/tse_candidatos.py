@@ -7,12 +7,14 @@ nascimento nunca. Só o titular eleito do cargo entra; vice e não eleito ficam 
 import csv
 import io
 import zipfile
+from datetime import UTC, date, datetime, timedelta, timezone
 from typing import Any
 
 from src.coletor_base.http import ClienteHTTP
 
 URL_TSE = "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_{ano}.zip"
-ELEICOES = {"PREFEITO": 2024, "GOVERNADOR": 2022}  # eleição mais recente de cada cargo
+CARGOS = ("PREFEITO", "GOVERNADOR")
+BRASILIA = timezone(timedelta(hours=-3))  # sem horário de verão desde 2019
 COLUNAS = [
     "ANO_ELEICAO",
     "SG_UF",
@@ -24,20 +26,45 @@ COLUNAS = [
 ]
 
 
+def hoje(agora: datetime | None = None) -> date:
+    """Data de hoje em Brasília (a posse é em 1º de janeiro no Brasil, não em UTC)."""
+    return (agora or datetime.now(UTC)).astimezone(BRASILIA).date()
+
+
+def eleicoes_vigentes(ref: date) -> dict[str, int]:
+    """Ano da eleição do mandato em curso em `ref`, por cargo (posse em 1º de janeiro do ano seguinte).
+
+    Prefeitos: eleições em 2024, 2028...; governadores: 2022, 2026... O eleito de 2026 só vira o titular
+    em 01/01/2027; até lá o titular é o de 2022 (e o de 2024 para prefeito).
+    """
+    ultimo = ref.year - 1  # a eleição mais recente que já deu posse
+    return {
+        "PREFEITO": ultimo - ultimo % 4,
+        "GOVERNADOR": ultimo - (ultimo - 2) % 4,
+    }
+
+
+def proxima_posse(ref: date) -> date:
+    """Próximo 1º de janeiro em que algum titular muda."""
+    # a próxima eleição de cada cargo é 4 anos depois da vigente; a posse, no 1º de janeiro seguinte
+    return min(date(ano + 5, 1, 1) for ano in eleicoes_vigentes(ref).values())
+
+
 def eh_titular_to(linha: dict[str, str]) -> bool:
     return (
         linha["SG_UF"] == "TO"
-        and linha["DS_CARGO"] in ELEICOES
+        and linha["DS_CARGO"] in CARGOS
         and linha["DS_SIT_TOT_TURNO"] == "ELEITO"
     )
 
 
-def baixar_titulares(http: ClienteHTTP) -> bytes:
-    """Baixa os zips do TSE e devolve o CSV minimizado (UTF-8, ';') só com os titulares do TO."""
+def baixar_titulares(http: ClienteHTTP, ref: date | None = None) -> bytes:
+    """Baixa os zips do TSE da eleição vigente em `ref` (padrão: hoje) e devolve o CSV minimizado
+    (UTF-8, ';') só com os titulares do TO."""
     saida = io.StringIO()
     escritor = csv.DictWriter(saida, COLUNAS, delimiter=";", extrasaction="ignore")
     escritor.writeheader()
-    for cargo, ano in ELEICOES.items():
+    for cargo, ano in eleicoes_vigentes(ref or hoje()).items():
         with zipfile.ZipFile(io.BytesIO(http.get(URL_TSE.format(ano=ano)))) as z:
             texto = z.read(f"consulta_cand_{ano}_TO.csv").decode("latin-1")
         linhas = csv.DictReader(io.StringIO(texto), delimiter=";")

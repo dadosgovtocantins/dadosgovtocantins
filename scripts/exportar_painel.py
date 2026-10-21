@@ -12,10 +12,8 @@ Uso (da raiz do projeto):
 """
 
 import argparse
-import importlib
 import json
 import sys
-from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -23,29 +21,21 @@ from typing import Any
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src.cli import REGISTRO_COLETORES  # noqa: E402
+from src.orquestracao.fontes import (  # noqa: E402,F401  (reexportados: carregar_bigquery.py os usa daqui)
+    FONTES,
+    IMPLEMENTADOS,
+    TITULARES,
+    TOTAL_MUNICIPIOS,
+)
+from src.orquestracao.painel import (  # noqa: E402,F401
+    SOMAR_NO_ESTADO,
+    instanciar,
+    montar_painel,
+    montar_titulares,
+    reaproveitar,
+)
 
 SAIDA = RAIZ / "src" / "ui" / "data" / "painel_dados.json"
-IMPLEMENTADOS = [
-    "TO-TER-01",
-    "TO-TER-02",
-    "TO-TER-03",
-    "TO-TER-04",
-    "TO-TER-05",
-    "TO-TER-06",
-    "TO-TER-07",
-    "TO-REC-02",
-]
-TITULARES = "TO-GER-01"  # dim_titular: nome do prefeito/governador eleito, fora das séries
-FONTES = [*IMPLEMENTADOS, TITULARES]
-# Indicadores municipais cujo total do estado é a soma dos 139 municípios (só com cobertura completa).
-SOMAR_NO_ESTADO = {"populacao_residente", "area_territorial", "producao_agricola", "rebanho_bovino"}
-TOTAL_MUNICIPIOS = 139
-
-
-def instanciar(id_fonte: str):
-    modulo, classe = REGISTRO_COLETORES[id_fonte]
-    return getattr(importlib.import_module(modulo), classe)(ambiente="dev")
 
 
 def coletar(id_fonte: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -62,83 +52,6 @@ def coletar(id_fonte: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     except Exception as e:
         return [], {**meta, "status": "erro", "erro": f"{type(e).__name__}: {e}"[:300]}
     return registros, {**meta, "status": "ok", "registros": len(registros)}
-
-
-def montar_painel(por_fonte: dict[str, list[dict[str, Any]]]) -> dict[str, Any]:
-    """Agrupa os registros em estado[ind] e municipios[cod][ind]; cada série é [[rótulo, valor], ...]."""
-    pontos: dict = defaultdict(lambda: defaultdict(dict))  # ind -> município|None -> periodo_ref
-    unidades = {}
-    for registros in por_fonte.values():
-        for r in registros:
-            rotulo = r["valor_texto"] or r["periodo_ref"][:4]
-            pontos[r["id_indicador"]][r["id_municipio"]][r["periodo_ref"]] = (
-                rotulo,
-                r["valor_num"],
-            )
-            unidades[r["id_indicador"]] = r["unidade"]
-    estado: dict[str, list] = {}
-    municipios: dict[str, dict] = defaultdict(dict)
-    for ind, por_ente in pontos.items():
-        for mun, por_periodo in por_ente.items():
-            serie = [[rot, v] for _ref, (rot, v) in sorted(por_periodo.items())]
-            if mun is None:
-                estado[ind] = serie
-            else:
-                municipios[mun][ind] = serie
-        if ind in SOMAR_NO_ESTADO and ind not in estado:
-            totais: dict = defaultdict(list)
-            for por_periodo in por_ente.values():
-                for ref, ponto in por_periodo.items():
-                    totais[ref].append(ponto)
-            serie = [
-                [v[0][0], round(sum(p[1] for p in v), 3)]
-                for _ref, v in sorted(totais.items())
-                if len(v) == TOTAL_MUNICIPIOS
-            ]
-            if serie:
-                estado[ind] = serie
-    return {"unidades": unidades, "estado": estado, "municipios": dict(municipios)}
-
-
-def montar_titulares(registros: list[dict[str, Any]]) -> dict[str, Any]:
-    """dim_titular -> {"estado": {...}, "municipios": {cod: {...}}}, só com nome, cargo, ano e fonte."""
-
-    def item(r: dict[str, Any]) -> dict[str, Any]:
-        return {
-            "nome": r["nome_titular"],
-            "cargo": r["cargo"],
-            "ano_eleicao": r["ano_eleicao"],
-            "fonte": r["fonte"],
-        }
-
-    return {
-        "estado": next((item(r) for r in registros if r["id_municipio"] is None), None),
-        "municipios": {r["id_municipio"]: item(r) for r in registros if r["id_municipio"]},
-    }
-
-
-def reaproveitar(painel: dict, fontes: dict, anterior: dict, id_fonte: str) -> None:
-    """Fonte pulada: copia do arquivo anterior o que ela produziu (ou marca como sem dado anterior)."""
-    ind = instanciar(id_fonte).id_indicador
-    meta = anterior.get("fontes", {}).get(id_fonte)
-    sem_titulares = id_fonte == TITULARES and not anterior.get("titulares")
-    if not meta or meta.get("status") != "ok" or sem_titulares:
-        fontes[id_fonte] = {
-            "indicador": ind,
-            "status": "erro",
-            "erro": "pulada e sem dado anterior",
-        }
-        return
-    fontes[id_fonte] = meta
-    if id_fonte == TITULARES:
-        painel["titulares"] = anterior["titulares"]
-        return
-    painel["unidades"][ind] = anterior["unidades"][ind]
-    if ind in anterior["estado"]:
-        painel["estado"][ind] = anterior["estado"][ind]
-    for mun, inds in anterior["municipios"].items():
-        if ind in inds:
-            painel["municipios"].setdefault(mun, {})[ind] = inds[ind]
 
 
 def main(argv: list[str] | None = None) -> int:

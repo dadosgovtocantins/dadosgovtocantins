@@ -70,3 +70,25 @@ jobs:
         env:
           PADRAO_EMAIL_INFRA: ${{ secrets.PADRAO_EMAIL_INFRA }}
         run: bash scripts/varrer_segredos.sh
+
+  workflows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      ACTIONLINT_VERSION: "1.7.12"
+      # SHA-256 do actionlint_1.7.12_linux_amd64.tar.gz (conferido no checksums.txt da release oficial)
+      ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Baixar o actionlint (versão e checksum fixos)
+        run: |
+          set -euo pipefail
+          arq="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -sSfL -o "${RUNNER_TEMP}/${arq}" "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${arq}"
+          echo "${ACTIONLINT_SHA256}  ${RUNNER_TEMP}/${arq}" | sha256sum -c -
+          tar -xzf "${RUNNER_TEMP}/${arq}" -C "${RUNNER_TEMP}" actionlint
+          echo "ACTIONLINT_BIN=${RUNNER_TEMP}/actionlint" >> "${GITHUB_ENV}"
+
+      - name: Validar os workflows
+        run: '"${ACTIONLINT_BIN}" -color'

@@ -189,7 +189,7 @@ def test_titulares_invalidos_nao_sao_gravados(rede_gravada, hoje_2026, monkeypat
     monkeypatch.setattr(
         tse_candidatos,
         "eh_titular_to",
-        lambda r: r["SG_UF"] == "TO" and r["DS_CARGO"] in tse_candidatos.ELEICOES,
+        lambda r: r["SG_UF"] == "TO" and r["DS_CARGO"] in tse_candidatos.CARGOS,
     )
     codigo, saida = _exportar(tmp_path)
     d = json.loads(saida.read_text("utf-8"))
