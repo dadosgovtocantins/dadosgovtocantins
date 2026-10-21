@@ -40,7 +40,7 @@ Duas frases que definem tudo o mais:
 | Visualização | Looker Studio (embed público, Extract Data) |
 | IA | Gemini via AI Studio — **parsing e narrativa, nunca cálculo** |
 | Segredos | Secret Manager |
-| CI/CD | GitHub (público) + Cloud Build |
+| CI/CD | GitHub Actions; repositório do código **privado** (decisão de 21/10/2026, task 34), site público em repositório separado; Cloud Build não usado por ora |
 | Observabilidade | Cloud Logging + Monitoring + Error Reporting |
 
 ## Comandos
@@ -143,9 +143,13 @@ docs/
 - Nunca escrever manualmente em PROD. Escrita em produção é exclusiva das
   Service Accounts do pipeline.
 - Nunca subir coletor para PROD sem passar por HML.
-- Nunca commitar credencial — repositório é público, o scan de segredos no CI é
+- Nunca commitar credencial — o repositório do código é privado, mas o histórico precisa
+  continuar limpo (o site público é outro repositório); o scan de segredos no CI é
   requisito, não precaução.
-- Nunca fazer merge em `main` sem PR com CI verde.
+- Nunca juntar **código** em `main` sem CI verde. O plano gratuito do GitHub não oferece
+  proteção de branch nem rulesets em repositório privado (API responde 403 em 21/10/2026),
+  então a CI roda em **todo push e pull request**; commits de dados do robô (task 35)
+  usam `[skip ci]`.
 
 ## Ambiente e segredos
 

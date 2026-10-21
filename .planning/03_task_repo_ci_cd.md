@@ -1,6 +1,6 @@
 ---
 task: Repositório público, CI/CD e separação de ambientes
-status: em andamento
+status: concluída (21/10/2026), com 2 desvios: repositório privado e sem proteção de branch (limitação do plano gratuito) — ver task 34
 sprint: S1
 eap: 1.1.4, 1.1.5
 ---
@@ -29,18 +29,25 @@ no instante do push.
 | `docs/runbook.md` | editar — seção de deploy e rollback |
 
 ## Critérios de aceite
-- [ ] Repositório público no GitHub com `LICENSE` permissiva (MIT ou Apache-2.0),
-      `README.md` explicando que é projeto de extensão da Unitins **e não canal
-      oficial do Governo do TO** — ⏳ arquivos prontos e commitados; **falta criar
-      o repositório remoto** (ação que publica conteúdo: aguarda decisão do Bruno)
+- [x] Repositório no GitHub com `LICENSE` permissiva (MIT), `README.md` explicando que é
+      projeto de extensão da Unitins **e não canal oficial do Governo do TO** —
+      **desvio decidido pelo Bruno em 21/10/2026: repositório do código PRIVADO**
+      (`dadosgovtocantins/dadosgovtocantins`); o público será só o site (task 36).
+      Enviado na task 34 (commit `f7a6d0d`)
 - [x] `.planning/` versionado (não está no `.gitignore`) — `git ls-files` lista os
       11 arquivos de `.planning/`
 - [ ] Branch `main` protegida: merge só via PR, CI verde obrigatório, sem push
-      direto — ⏳ depende do repositório remoto
+      direto — **NÃO atendido: impossível no plano gratuito.** A API do GitHub responde
+      403 "Upgrade to GitHub Pro or make this repository public to enable this feature"
+      para proteção de branch e rulesets (conferido em 21/10/2026). Mitigação em vigor:
+      a CI (lint, formato, testes e segredos) roda em todo push e pull request
 - [x] Branches `main` (prod), `hml`, `feature/*` em uso — `main` e `hml` criadas
-- [ ] CI roda em todo PR e falha em: erro de `ruff`, teste vermelho **ou segredo
-      detectado** — ⏳ `.github/workflows/ci.yml` escrito; a prova com PR de chave
-      falsa depende do repositório remoto
+- [x] CI roda em todo PR e falha em: erro de `ruff`, teste vermelho **ou segredo
+      detectado** — CI verde na `main` (execução 39533782569: 181 testes passaram,
+      4 pulados, cobertura 91%); PR de teste #1 com chave falsa: o job `segredos`
+      reprovou no `push` (39534071966) e no `pull_request` (39534098715), o job
+      `qualidade` passou, e a chave não aparece nos logs. `ruff` e teste vermelho não
+      foram simulados no GitHub (os jobs falham pelo código de saída)
 - [x] `gitleaks detect --log-opts="--all"` limpo no histórico completo —
       `1 commits scanned … no leaks found` (rodado via container oficial)
 - [x] `Dockerfile` builda com Python 3.11 + PySUS e roda `pytest` no build —
@@ -61,11 +68,11 @@ no instante do push.
 
 ## Plano
 - [x] 1. `git init`, `.gitignore`, `LICENSE`, `README.md`; primeiro commit com `.planning/`
-- [ ] 2. Criar o repositório público e configurar proteção de `main`
+- [x] 2. Criar o repositório (privado, decisão de 21/10) — proteção de `main` impossível no plano gratuito (ver critérios)
 - [x] 3. `pyproject.toml` + dependências + `ruff` configurado
 - [x] 4. `Dockerfile` e build local verde
 - [x] 5. `ci.yml` com lint + pytest + gitleaks
-- [ ] 6. PR de teste com chave falsa provando que o CI barra
+- [x] 6. PR de teste com chave falsa provando que o CI barra (PR #1, fechado sem merge; branch apagada)
 - [x] 7. `cloudbuild.yaml` com deploy hml/prod e rollback documentado
 
 ## Segurança
@@ -138,6 +145,8 @@ uid=1000(coletor) gid=1000(coletor) groups=1000(coletor)
 
 ## Onde parei
 
+**Retomada e concluída em 21/10/2026 (task 34).** O texto abaixo é o registro do bloqueio anterior.
+
 **Bloqueada, aguardando conta GitHub do projeto.**
 
 Passos 1, 3, 4, 5 e 7 fechados e commitados localmente (3 commits, branches
@@ -197,3 +206,6 @@ runbook — mesmo tratamento da conta-projeto do GCP.
 - **Teste de não-oficialidade desde o primeiro commit** (`tests/test_nao_oficialidade.py`).
   RR-05 é o maior risco do projeto e a regra que o mitiga é texto — texto quebra
   em silêncio. O CI passa a barrar a remoção do aviso.
+- **Retomada (21/10/2026, task 34):** a conta GitHub do projeto é `dadosgovtocantins`; o Bruno manteve o nome sabendo do risco RR-05 que esta spec apontava (o endereço público do painel terá o nome da conta). O repositório do código ficou **privado** e o site público será um repositório separado (design 33). O histórico foi refeito em um commit inicial limpo.
+- **Dockerfile:** o critério "builda e roda `pytest` no build" valia em setembro; com a suíte atual o build falha (o `pytest` do build só enxerga `src/`, `tests/` e o README, e os testes precisam de `scripts/`, `docs/` e `index.html`). O `imagem.yml` ficou só manual até o Cloud Run voltar a ser usado.
+- **Pendência de custódia (RT-14):** a conta `dadosgovtocantins` do GitHub precisa de 2FA, recuperação configurada e registro no runbook, como a conta-projeto do GCP (task 02).

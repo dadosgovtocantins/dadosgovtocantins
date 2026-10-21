@@ -34,7 +34,7 @@ Legenda de status: `pendente` · `em andamento` · `concluída` · `cortada`
 
 | # | Task | Sprint | EAP | RF/RNF principais | Spec | Status |
 |---|---|---|---|---|---|---|
-| 03 | `repo_ci_cd` **(1ª da fila)** | S1 | 1.1.4–1.1.5 | RNF-S03, §9.4.1, §12.4 | ✅ escrita | **em andamento — bloqueada: aguarda conta GitHub do projeto** |
+| 03 | `repo_ci_cd` **(1ª da fila)** | S1 | 1.1.4–1.1.5 | RNF-S03, §9.4.1, §12.4 | ✅ escrita | **concluída (21/10/2026; repositório privado e sem proteção de branch por limitação do plano gratuito — task 34)** |
 | 02 | `fundacao_gcp` | S1 | 1.1.2–1.1.3 | RF-03, RF-05, RF-06, RF-90..93, RT-14 | ✅ escrita | **concluída** |
 | 04 | `catalogo_dois_niveis` | S2 | 1.1.6 | RF-80..RF-84, RF-04 | ✅ escrita | **concluída** |
 | 05 | `identidade_nao_oficialidade` | S2 | 1.1.7 | RF-10..RF-14, RNF-S08, RR-05 | ✅ escrita | **concluída** |
@@ -58,6 +58,15 @@ Legenda de status: `pendente` · `em andamento` · `concluída` · `cortada`
 | 23 | `finops_saude_operacao` | S8 | 1.5.1–1.5.4 | RF-85, RF-90..RF-95, §11 | ✅ escrita | **concluída** |
 | 24 | `qualidade_golive` | S9 | 1.6.1–1.6.7 | **Gate 2**, RNF-D01..D06, §12.5 | ✅ escrita | **concluída (Gate 2)** |
 | 25 | `entregaveis_academicos` | S9 | 1.7.1–1.7.5 | §0.3, §9.4 | ✅ escrita | **concluída** |
+| 26 | `correcoes_painel_novo` | — | — | RF-55, RF-10 | ✅ escrita | **concluída** |
+| 27 | `painel_novo_na_raiz` | — | — | — | ✅ escrita | **concluída** |
+| 28 | `coletores_reais_ibge_tesouro` | — | — | RF-55, RF-71 | ✅ escrita | **concluída** |
+| 29 | `painel_dados_reais` | — | — | RF-55 | ✅ escrita | **concluída** |
+| 30 | `coletor_titulares` | — | — | RF-11, RNF-S05, RNF-S08 | ✅ escrita | **implementada e verificada (14/10/2026); pendências do Bruno: catálogo e texto legal** |
+| 31 | `banco_bigquery_sandbox` | — | — | RF-55, RF-63 | ✅ escrita | **concluída (20/10/2026)** |
+| 32 | `titulares_no_painel` | — | — | RF-11 | ✅ escrita | **concluída (15/10/2026)** |
+| 33 | `design_automacao_coleta` | — | — | RF-60..RF-68, RF-82 | ✅ design | **aprovado (21/10/2026); tasks 35 a 45 ainda por escrever** |
+| 34 | `primeiro_envio_github` | — | — | RNF-S03, §12.4 | ✅ escrita | **concluída (21/10/2026)** |
 
 *(Numeração começa em 02 e nunca é reaproveitada — task cortada mantém o número
 com `status: cortada` e o motivo escrito.)*
@@ -117,4 +126,4 @@ com `status: cortada` e o motivo escrito.)*
 
 | Sprint | Sem. | Fechado | Demo | Escorregou / cortado |
 |---|---|---|---|---|
-| S1 | 1–2 | Task 03: repo local, CI, Docker (1.01 GB), cloudbuild, runbook — 5 de 7 passos | — | Passos 2 e 6 bloqueados: aguardam a conta GitHub do projeto |
+| S1 | 1–2 | Task 03: repo local, CI, Docker (1.01 GB), cloudbuild, runbook — 5 de 7 passos | — | Passos 2 e 6 fechados em 21/10/2026 (task 34): repositório privado, CI no GitHub e teste com chave falsa; proteção de `main` indisponível no plano gratuito |

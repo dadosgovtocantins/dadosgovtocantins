@@ -336,7 +336,7 @@ Sem orçamento de infraestrutura, o controle de custo deixa de ser boa prática 
 | Visualização | Looker Studio | Gratuito, embed público |
 | IA | Gemini via AI Studio | Parsing, classificação, narrativa |
 | Segredos | Secret Manager | Zero credencial em código |
-| Versionamento | GitHub | Histórico, CI/CD e código aberto (seção 9.4) |
+| Versionamento | GitHub | Histórico e CI/CD; o código está em repositório **privado** (decisão de 21/10/2026, task 34; seção 9.4) |
 | CI/CD | Cloud Build | Nativo GCP |
 | Observabilidade | Cloud Logging \+ Monitoring \+ Error Reporting | Nativo |
 
@@ -465,7 +465,7 @@ A opção A foi descartada corretamente. A opção C (@unitins.br) permanece com
 │   ├── 1.1.1 Plano de trabalho PIBIEX e alinhamento com o orientador  
 │   ├── 1.1.2 Decisão e criação da conta/projeto GCP (seção 2.3)  
 │   ├── 1.1.3 Datasets BigQuery (raw/stg/mart) e buckets  
-│   ├── 1.1.4 Repositório GitHub público \+ Cloud Build  
+│   ├── 1.1.4 Repositório GitHub (privado desde 21/10/2026) \+ Cloud Build  
 │   ├── 1.1.5 Ambientes dev / homologação / produção  
 │   ├── 1.1.6 Split do catálogo em catalogo\_fontes \+ catalogo\_indicadores  
 │   └── 1.1.7 Identidade visual do projeto e regras de não-oficialidade  
@@ -645,7 +645,7 @@ O painel é **público**. Isso muda o cálculo: o número de consultas deixa de 
 | UI/UX | Figma | Protótipo dos cards e identidade própria |
 | Modelagem de dados | dbdiagram.io / Markdown | Star schema |
 | IDE | VS Code | Python \+ SQL |
-| Controle de versão | Git \+ GitHub **público** | main (prod), hml, feature/\* |
+| Controle de versão | Git \+ GitHub **privado** (decisão de 21/10/2026, task 34; antes: público). O site público (painel e dados) fica em repositório separado | main (prod), hml, feature/\* |
 | CI/CD | Cloud Build | Push → build → deploy |
 | Cloud | Google Cloud Platform | Projeto único, 3 ambientes |
 | Containerização | Docker | Python \+ Playwright \+ PySUS |
@@ -795,7 +795,7 @@ Alteração de metodologia de indicador é versionada e exibida na ficha.
 
 Projeto de bolsa tem prazo. Sem plano, o painel sai do ar quando a bolsa acaba. Quatro medidas:
 
-1. **Código aberto desde a S1.** Repositório público no GitHub, com licença permissiva. O trabalho sobrevive à conta.
+1. **Código aberto desde a S1.** Repositório público no GitHub, com licença permissiva. O trabalho sobrevive à conta. **Decisão de 21/10/2026, task 34:** o repositório do código é **privado**, por segurança; a licença MIT permanece, o site (painel e dados) é público em repositório separado, e abrir o código é decisão futura do Bruno.
 
 2. **Catálogo publicado como recurso aberto.** As 40 fontes catalogadas têm valor independente do painel — é um produto de extensão por si só.
 
@@ -931,7 +931,7 @@ Painel Looker interno: fontes ativas vs. falhando, última coleta por fonte, in
 | BigQuery (ds\_mart) | Snapshot diário | 30 dias | Dataset separado, escrita bloqueada |
 | Cloud Storage (raw) | Versionamento \+ retention policy | 365 dias | Bucket com retention lock |
 | Base Mestre (Sheets) | Export diário para Cloud Storage | 90 dias | Versionamento de objeto |
-| Código | GitHub público \+ tags de release | Permanente | — |
+| Código | GitHub (privado desde 21/10/2026) \+ tags de release | Permanente | — |
 | Configuração de infra | Script versionado | Permanente | — |
 
 **Teste de restauração semestral obrigatório.**

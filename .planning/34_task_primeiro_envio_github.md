@@ -1,6 +1,6 @@
 ---
 task: Primeiro envio ao GitHub — histórico limpo, sem segredos, CI verde
-status: em andamento — passos 1 a 10 feitos (21/10/2026); parado antes do push (passo 11, revisão do Bruno)
+status: concluída (21/10/2026)
 criada: 2026-10-21
 ---
 
@@ -51,10 +51,14 @@ Sem isso o robô diário (task 35) não tem onde rodar. Esta task cumpre também
       — *`git config --local user.email` = `<id>+dadosgovtocantins@users.noreply.github.com`, autor "Painel TO em Dados"; `git config --global user.email` idêntico ao de antes (comparado)*
 - [x] **Backup.** Bundle do repositório antigo fora da pasta do projeto, com `git bundle verify` ok; não é enviado a lugar nenhum.
       — *`~/Backups/painel-to/historico-antigo-2026-10-21.bundle` com `git bundle verify` = "complete history", mais cópia do `.git` antigo; ambos fora da pasta do projeto*
-- [ ] **Remoto.** Repositório continua **privado** (`gh repo view --json visibility`), `main` enviada, GitHub Pages não ativado; proteção da `main` verificada e registrada como disponível ou indisponível no plano gratuito.
-- [ ] **CI no GitHub.** A execução da `main` termina `success` nos jobs `qualidade` e `segredos` (e `imagem` quando disparado), com o mesmo número de testes do local; teste negativo: branch descartável com uma chave falsa no formato da AWS ("AKIA" + 16 caracteres entre A–Z e 2–7) faz o job `segredos` falhar; a chave é **montada na hora do teste e nunca escrita em arquivo do repositório** (a de exemplo da AWS é ignorada pelo gitleaks; e o valor escrito aqui na spec já reprovou a varredura em 21/10); a branch é apagada depois. O e-mail de infraestrutura **não** é usado no teste negativo (seria enviado ao GitHub).
-- [ ] **Decisão registrada.** PRD, `01_system_prompt.md` e `03` dizem que o repositório do código é privado e o público terá só o site.
-- [ ] Gate S1–S21 reportado na tabela da skill, sem ❌.
+- [x] **Remoto.** Repositório continua **privado** (`gh repo view --json visibility`), `main` enviada, GitHub Pages não ativado; proteção da `main` verificada e registrada como disponível ou indisponível no plano gratuito.
+      — *`gh repo view`: PRIVATE; `main` no GitHub = `f7a6d0d` (mesmo hash do local, autor "Painel TO em Dados"); GitHub Pages: 404 (não ativado); proteção de branch e rulesets: a API responde 403 "Upgrade to GitHub Pro or make this repository public to enable this feature" — indisponível no plano gratuito, como o Bruno informou; documentado em `ci.yml`, `01` e spec 03*
+- [x] **CI no GitHub.** A execução da `main` termina `success` nos jobs `qualidade` e `segredos` (e `imagem` quando disparado), com o mesmo número de testes do local; teste negativo: branch descartável com uma chave falsa no formato da AWS ("AKIA" + 16 caracteres entre A–Z e 2–7) faz o job `segredos` falhar; a chave é **montada na hora do teste e nunca escrita em arquivo do repositório** (a de exemplo da AWS é ignorada pelo gitleaks; e o valor escrito aqui na spec já reprovou a varredura em 21/10); a branch é apagada depois. O e-mail de infraestrutura **não** é usado no teste negativo (seria enviado ao GitHub).
+      — *execução 39533782569 (push na `main`): `qualidade` success em 51 s e `segredos` success em 6 s; no log: Ubuntu 24.04, `ruff==0.16.7`, `pytest==9.1.1`, 181 testes passaram e 4 foram pulados (os do painel antigo), cobertura 91%, gitleaks "1 commits scanned, no leaks found". Teste negativo: PR #1 com chave falsa montada na hora — `push` (39534071966) e `pull_request` (39534098715) com `qualidade` success e `segredos` **failure** ("gitleaks encontrou segredo"); a chave não aparece em nenhum log; PR fechado sem merge e branch apagada (no GitHub só existe a `main`). O e-mail de infraestrutura não foi usado no teste*
+- [x] **Decisão registrada.** PRD, `01_system_prompt.md` e `03` dizem que o repositório do código é privado e o público terá só o site.
+      — *PRD (5 trechos: tabela de versionamento, EAP, controle de versão, princípio "código aberto desde a S1", artefatos), `01_system_prompt.md` (stack e regras de credencial e merge), spec 03 (critérios, plano e decisões) e ROADMAP (linha da 03 e linhas 26 a 34)*
+- [x] Gate S1–S21 reportado na tabela da skill, sem ❌.
+      — *tabela abaixo; nenhum ❌, um ⚠️ (S19)*
 
 ## Fora de escopo
 - Orquestrador diário, workflow agendado e commits do robô com `[skip ci]` (task 35).
@@ -75,9 +79,9 @@ Sem isso o robô diário (task 35) não tem onde rodar. Esta task cumpre também
 - [x] 8. Histórico novo: configurar o Git local, commit inicial a partir da árvore limpa, remover os ramos antigos, `reflog expire` + `gc --prune=now`; provar a limpeza.
 - [x] 9. Clone de teste local + `pytest -q`.
 - [x] 10. Varredura local com gitleaks (binário da release oficial, versão fixa, checksum conferido, pasta temporária, nada instalado no sistema).
-- [ ] 11. **Pausa de confirmação:** mostrar ao Bruno a lista de arquivos, o tamanho e o resultado das varreduras; só enviar com o "pode enviar".
-- [ ] 12. `git push` para o repositório privado; acompanhar a CI; teste negativo com a chave falsa; verificar a proteção da `main`.
-- [ ] 13. Registrar a decisão de repositório privado no PRD, `01` e `03`; gate S1–S21; atualizar status da `03` e o ROADMAP.
+- [x] 11. **Pausa de confirmação:** mostrar ao Bruno a lista de arquivos, o tamanho e o resultado das varreduras; só enviar com o "pode enviar".
+- [x] 12. `git push` para o repositório privado; acompanhar a CI; teste negativo com a chave falsa; verificar a proteção da `main`.
+- [x] 13. Registrar a decisão de repositório privado no PRD, `01` e `03`; gate S1–S21; atualizar status da `03` e o ROADMAP.
 
 ## Segurança
 | Item | Como se aplica |
@@ -89,6 +93,25 @@ Sem isso o robô diário (task 35) não tem onde rodar. Esta task cumpre também
 | S20 dependency confusion | `--index-url https://pypi.org/simple` mantido |
 | S22/S23 | os nomes dos titulares são dado público do TSE; nenhum dado pessoal novo |
 | Demais | N/A (sem login, upload ou servidor próprio) |
+
+### Resultado do gate S1–S23 (21/10/2026, conferido no código e nas execuções reais)
+| Item | Status | Evidência | Correção |
+|---|---|---|---|
+| S1 segredos | ✅ | histórico novo com 1 commit; e-mail de infraestrutura = 0 em qualquer objeto; gitleaks 8.30.1 local e na CI sem achados; padrão do e-mail guardado como segredo do GitHub e em arquivo local 600; `.env`, `*.key`, `*.pem` (exceto o certificado público) ignorados; teste negativo reprovou a chave falsa na CI | — |
+| S2 validação de entrada | N/A | scripts novos não recebem entrada externa | — |
+| S3 SQL | N/A | nenhum SQL novo nesta task | — |
+| S4–S10 | N/A | sem login, sessão, endpoint ou formulário | — |
+| S11 headers/CORS/HTTPS | N/A | sem superfície HTTP; o push usa HTTPS com a credencial do `gh` | — |
+| S12 menor privilégio | ✅ | `permissions: contents: read` em `ci.yml` e `imagem.yml`; credencial de Git só neste repositório (`credential.helper` local); token do `gh` com escopos `repo` e `workflow` | o robô da task 35 precisará de escrita: pedir só `contents: write` no job dele |
+| S13 upload | N/A | — | — |
+| S14 dependências/CI | ✅ | instalação pelo `requirements.lock.txt`; `ruff`, `pytest` e `pytest-cov` com versão fixa; ações de terceiros fixadas por commit conferido contra a branch oficial; gitleaks com versão e SHA-256 | — |
+| S15 tratamento de erro | ✅ | `varrer_segredos.sh` usa `set -euo pipefail`, sai com 1 em qualquer achado, 2 sem padrão, e reprova quando o gitleaks falta; nunca imprime conteúdo (8 testes) | — |
+| S16–S18 | N/A | sem Electron, VPS ou site exposto | — |
+| S19 Trivy | ⚠️ | `trivy-action` fixado por commit (v0.36.0) no `imagem.yml`, mas o job é só manual e o build da imagem falha hoje (o Dockerfile roda `pytest` sem `scripts/`, `docs/` e `index.html`): o scan da imagem não roda automaticamente | corrigir o Dockerfile quando o Cloud Run voltar a ser usado (fora desta task) |
+| S20 dependency confusion | ✅ | `--index-url https://pypi.org/simple` nas instalações da CI | — |
+| S21 API keys | ✅ | nenhuma chave de API no repositório; o gitleaks não achou nenhuma | — |
+| S22 logs | ✅ | o script só imprime contagens e nomes de arquivo; o log da CI não traz o padrão nem a chave de teste | — |
+| S23 LGPD | ✅ | e-mail pessoal do Bruno removido dos metadados do Git; dados pessoais no repositório: só nomes públicos de titulares eleitos (TSE) | — |
 
 ## Verificação
 ```bash
@@ -121,3 +144,9 @@ Decisões de planejamento (21/10; as marcadas "minha chamada" são do agente e p
 - **`~$*` ignorado:** o commit continha `~$apresentacao_painel_to.pptx`, a trava temporária do PowerPoint; saiu do commit e continua no disco.
 - **Commit único reescrito 2x com `--amend` (antes de qualquer envio):** uma para tirar a trava do Office, outra para tirar a chave falsa desta spec; a cada vez, `reflog expire` + `gc --prune=now` e nova varredura.
 - **Achado dos números inventados do `scrapers_estaduais.py` (12, 24, 139, 580, 12): resolvido pela remoção do módulo.**
+- **Credencial de Git só neste repositório:** `credential.helper` local (`''` para zerar o do Keychain e depois `!gh auth git-credential`); o `git config --global` ficou igual. Consequência: o `push` usa a conta **ativa** do `gh`; se o Bruno trocar para a `brunovima83`, o push deste repositório falha com 403 até voltar a `gh auth switch -u dadosgovtocantins`.
+- **Proteção de branch (confirmado pela API):** a limitação que o Bruno descreveu é real; a CI em todo push e pull request é a barreira.
+- **Commit com a chave falsa fica órfão no GitHub:** apagar a branch remove a referência, mas o commit descartável pode ficar acessível pelo hash por um tempo; é uma chave fabricada, sem valor, e fora de qualquer referência (o gitleaks da CI não a varre).
+- **Custo da CI:** cerca de 1 minuto de Actions por execução (cota gratuita privada: 2.000 min/mês).
+- **Avisos da CI para acompanhar:** `actions/checkout@v4` roda em Node.js 20, que o GitHub está forçando para Node 24; e o rótulo `ubuntu-latest` migra para o Ubuntu 26 (hoje é 24.04). Nada falhou; revisar as versões na task 35.
+- **Pendências fora desta task:** 2FA, recuperação e registro no runbook da conta GitHub `dadosgovtocantins` (custódia, RT-14, task 02); URL do repositório no runbook; corrigir o Dockerfile antes de religar o `imagem.yml`.
