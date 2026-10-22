@@ -52,8 +52,9 @@ O painel só roda no computador do Bruno (`python3 -m http.server`). A task 35 j
 - [x] **`publicar_site.sh`:** testado com um repositório remoto local: primeira publicação cria tudo; segunda sem mudança não cria commit; mudança só no `estado_fontes.json` gera um commit que toca só esse arquivo; nunca usa `--force`; o token não aparece no log.
       — *11 testes contra um repositório remoto local vazio: 1ª publicação cria o site inteiro (1 commit), a 2ª diz "Nada a publicar" e não cria commit, mudança só no `estado_fontes.json` gera 1 commit que toca só esse arquivo, arquivo que saiu da lista é removido, segredo no site aborta antes de qualquer push (repositório continua vazio), sem o padrão do e-mail recusa, repositório inexistente falha com mensagem clara, token ausente da saída, sem `--force`/`set -x`; autor `github-actions[bot]`. O token vai pelo ambiente do Git (`GIT_CONFIG_*`), nunca na URL nem em argumento*
 - [x] **`verificar.yml`:** o passo de publicação só roda com o segredo presente (sem ele, a execução termina verde e diz que a publicação está desligada); `actionlint` e CI verdes.
-      — *último passo do workflow, depois das issues; `actionlint` limpo; o repositório de destino e o segredo `PADRAO_EMAIL_INFRA` (obrigatório na publicação) entram por `env`; falta só a CI verde no GitHub (próximo commit)*
-- [ ] `pytest`, `ruff` e CI verdes; gate S1–S23 reportado.
+      — *último passo do workflow, depois das issues; `actionlint` limpo; o repositório de destino e o segredo `PADRAO_EMAIL_INFRA` (obrigatório na publicação) entram por `env`; CI verde no GitHub (commit 18a955b); a execução agendada das 14h (cron de verdade) rodou sozinha com o passo novo e terminou verde dizendo "Publicação desligada"*
+- [x] `pytest`, `ruff` e CI verdes; gate S1–S23 reportado.
+      — *556 testes verdes, `ruff` e `actionlint` limpos, gitleaks limpo, CI verde nos 4 jobs (`qualidade`, `dependencias`, `segredos`, `workflows`; commit 18a955b); gate na seção abaixo*
 - [ ] **Depois do "de acordo" do Bruno (passos 9 e 10):** primeira publicação real, URL pública abrindo com dados e "Verificado em" do dia, gitleaks no repositório público limpo, execução sem novidade atualizando só o `estado_fontes.json` no público.
 
 ## Fora de escopo
@@ -69,7 +70,7 @@ O painel só roda no computador do Bruno (`python3 -m http.server`). A task 35 j
 - [x] 4. Tela: "Verificado em", situação das fontes e aviso legal; testes de UI.
 - [x] 5. Teste do e-mail completo no lugar do nome da conta.
 - [x] 6. `publicar_site.sh` incremental, testado com remoto local; passo no `verificar.yml` desligado sem segredo.
-- [ ] 7. Documentação (README, runbook), gate S1–S23 e CI verde. **PAUSA para o Bruno criar o repositório e o token.** *(documentação e gate prontos; falta a CI verde)*
+- [x] 7. Documentação (README, runbook), gate S1–S23 e CI verde. **PAUSA para o Bruno criar o repositório e o token.**
 - [ ] 8. Primeira publicação real e prova da URL pública.
 - [ ] 9. Fechar a task no ROADMAP.
 
@@ -105,6 +106,9 @@ O painel só roda no computador do Bruno (`python3 -m http.server`). A task 35 j
 | S22 | ✅ | sem `set -x`, token fora da saída (testes); log do orquestrador só com id da fonte e contagem | — |
 
 Nenhum ❌. Os ⚠️ são limites do Pages (S11), decisão do Bruno (S19) e melhoria de lock (S20).
+
+## Achado depois do envio: PRs do Dependabot
+O `dependabot.yml` abriu 7 PRs na hora (5 de `pip`, 2 de `github-actions`: `actions/checkout` 4→7 e `actions/setup-python` 5→7). Todos reprovam no job `segredos`: **PRs do Dependabot não recebem os segredos do Actions** (`PADRAO_EMAIL_INFRA` chega vazio e o `varrer_segredos.sh` sai com 2). Correção sem enfraquecer o gate: cadastrar o mesmo segredo também como **segredo do Dependabot** (`gh secret set PADRAO_EMAIL_INFRA --app dependabot`, valor vindo do arquivo local, sem imprimir). Pendente de autorização do Bruno; os PRs não foram mesclados nem fechados.
 
 ## Verificação
 ```bash
