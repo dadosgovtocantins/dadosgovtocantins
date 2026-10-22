@@ -9,6 +9,9 @@ Indicadores de Políticas Públicas do Estado do Tocantins**
 > e link para o dado original. O projeto não tem vínculo institucional com o
 > Governo do Estado do Tocantins e não utiliza seus símbolos oficiais.
 
+**Painel público:** https://dadosgovtocantins.github.io/painel/ (atualizado todo dia às 14h, horário de Brasília; o
+rodapé mostra quando as fontes foram verificadas pela última vez e a situação de cada uma).
+
 ---
 
 ## O que é

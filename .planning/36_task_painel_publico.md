@@ -1,6 +1,6 @@
 ---
 task: Painel público no GitHub Pages, "verificado em" e situação das fontes
-status: passos locais concluídos (21/10/2026); parado antes de publicar no repositório público (o Bruno cria o repositório e o token)
+status: concluída (22/10/2026)
 criada: 2026-10-21
 depende_de: 35 (concluída), design 33
 ---
@@ -55,7 +55,8 @@ O painel só roda no computador do Bruno (`python3 -m http.server`). A task 35 j
       — *último passo do workflow, depois das issues; `actionlint` limpo; o repositório de destino e o segredo `PADRAO_EMAIL_INFRA` (obrigatório na publicação) entram por `env`; CI verde no GitHub (commit 18a955b); a execução agendada das 14h (cron de verdade) rodou sozinha com o passo novo e terminou verde dizendo "Publicação desligada"*
 - [x] `pytest`, `ruff` e CI verdes; gate S1–S23 reportado.
       — *556 testes verdes, `ruff` e `actionlint` limpos, gitleaks limpo, CI verde nos 4 jobs (`qualidade`, `dependencias`, `segredos`, `workflows`; commit 18a955b); gate na seção abaixo*
-- [ ] **Depois do "de acordo" do Bruno (passos 9 e 10):** primeira publicação real, URL pública abrindo com dados e "Verificado em" do dia, gitleaks no repositório público limpo, execução sem novidade atualizando só o `estado_fontes.json` no público.
+- [x] **Depois do "de acordo" do Bruno (passos 9 e 10):** primeira publicação real, URL pública abrindo com dados e "Verificado em" do dia, gitleaks no repositório público limpo, execução sem novidade atualizando só o `estado_fontes.json` no público.
+      — *1ª publicação (execução 39715926513, commit público c731201): 107 arquivos, nenhum `.py`/`.md`/`tests`/`.planning`/`scripts`/`docs`/`.github`/segredo; gitleaks sem achados e o padrão do e-mail de infraestrutura ausente do conteúdo e dos metadados; autor `github-actions[bot]`. Pages ligado por `gh api` (`main` / raiz, HTTPS forçado, build `built`). **URL pública `https://dadosgovtocantins.github.io/painel/`**: todos os arquivos principais respondem 200, o Chrome renderiza o painel com dados reais (Palmas, PIB 14,2 R$ bi, população 302.692, titular do TSE) e a página só contata o próprio endereço. 2ª execução sem novidade (39716156534): 9 "sem novidade" e o commit público 11dbc99 tocou só `src/ui/data/estado_fontes.json` (+19 −19)*
 
 ## Fora de escopo
 - Domínio próprio, analytics e cookies.
@@ -71,8 +72,8 @@ O painel só roda no computador do Bruno (`python3 -m http.server`). A task 35 j
 - [x] 5. Teste do e-mail completo no lugar do nome da conta.
 - [x] 6. `publicar_site.sh` incremental, testado com remoto local; passo no `verificar.yml` desligado sem segredo.
 - [x] 7. Documentação (README, runbook), gate S1–S23 e CI verde. **PAUSA para o Bruno criar o repositório e o token.**
-- [ ] 8. Primeira publicação real e prova da URL pública.
-- [ ] 9. Fechar a task no ROADMAP.
+- [x] 8. Primeira publicação real e prova da URL pública.
+- [x] 9. Fechar a task no ROADMAP.
 
 ## Segurança
 - **S1:** a deploy key SSH (`PAINEL_DEPLOY_KEY`, escrita só no `painel`, sem acesso à conta nem ao repositório do código) é segredo do GitHub; a chave privada nunca passa pelo chat nem pelo log: vai para um arquivo temporário 0600 apagado ao sair, sem configuração nem agente SSH da máquina e com o servidor conferido (`StrictHostKeyChecking=yes`).
