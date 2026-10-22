@@ -27,7 +27,7 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "${TMP}"' EXIT
 CLONE="${TMP}/painel"
 
-git clone --quiet --depth 1 "${URL}" "${CLONE}" 2>/dev/null || { echo "ERRO: não consegui clonar o repositório público." >&2; exit 1; }
+git clone --quiet --depth 1 "${URL}" "${CLONE}" || { echo "ERRO: não consegui clonar o repositório público." >&2; exit 1; }
 git -C "${CLONE}" checkout --quiet -B "${RAMO}"
 
 "${PYTHON}" "${RAIZ}/scripts/montar_site.py" --saida "${CLONE}" --exigir-padrao
@@ -41,7 +41,21 @@ if git diff --cached --quiet; then
   exit 0
 fi
 git commit --quiet -m "site: atualização do painel ($(git diff --cached --name-only | wc -l | tr -d ' ') arquivo(s))"
-git push --quiet origin "HEAD:${RAMO}" 2>/dev/null || {
-  git pull --quiet --rebase origin "${RAMO}" && git push --quiet origin "HEAD:${RAMO}"
-}
+
+# Nenhum erro é escondido: sucesso só é declarado depois de conferir, NO REMOTO, que o ramo aponta para o commit.
+if ! git push --quiet origin "HEAD:${RAMO}"; then
+  if git ls-remote --exit-code --heads origin "${RAMO}" >/dev/null 2>&1; then
+    echo "Push recusado; o ramo existe no remoto, atualizando e tentando uma vez mais." >&2
+    git pull --quiet --rebase origin "${RAMO}" || { echo "ERRO: não consegui atualizar o clone." >&2; exit 1; }
+    git push --quiet origin "HEAD:${RAMO}" || { echo "ERRO: o push foi recusado de novo; nada foi publicado." >&2; exit 1; }
+  else
+    echo "ERRO: o push foi recusado (token sem permissão de escrita em Contents?); nada foi publicado." >&2
+    exit 1
+  fi
+fi
+remoto="$(git ls-remote origin "refs/heads/${RAMO}" | cut -f1)"
+if [[ -z "${remoto}" || "${remoto}" != "$(git rev-parse HEAD)" ]]; then
+  echo "ERRO: depois do push o remoto não aponta para o commit publicado; nada foi publicado." >&2
+  exit 1
+fi
 echo "Site publicado: $(git rev-parse --short HEAD)."

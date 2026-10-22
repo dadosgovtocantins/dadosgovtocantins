@@ -192,3 +192,67 @@ def test_workflow_so_publica_com_o_segredo_e_nunca_cancela():
     wf = (RAIZ / ".github" / "workflows" / "verificar.yml").read_text("utf-8")
     assert "PAT_PUBLICACAO_PAINEL" in wf and "Publicação desligada" in wf
     assert "cancel-in-progress: false" in wf
+
+
+# --- falhas nunca viram "publicado" ------------------------------------------------------------------
+
+
+def _hook(remoto, corpo):
+    h = remoto / "hooks" / "pre-receive"
+    h.write_text("#!/bin/sh\n" + corpo + "\n")
+    h.chmod(0o755)
+
+
+def test_push_recusado_pelo_remoto_falha_e_nao_diz_que_publicou(projeto, remoto, ambiente):
+    """Caso real (22/10/2026): token sem permissão de escrita. O script antes imprimia "Site publicado"."""
+    _hook(remoto, "echo 'sem permissao' >&2; exit 1")
+    r = _publicar(projeto, remoto, ambiente)
+    assert r.returncode != 0
+    assert "Site publicado" not in r.stdout + r.stderr
+    assert "push foi recusado" in r.stderr and "nada foi publicado" in r.stderr
+    assert _git("--git-dir", str(remoto), "branch", "--list", env=ambiente).stdout.strip() == ""
+
+
+def _mudar_estado(projeto, quando):
+    estado = projeto / "src" / "ui" / "data" / "estado_fontes.json"
+    dados = json.loads(estado.read_text("utf-8"))
+    dados["ultima_execucao_orquestrador"] = quando
+    estado.write_text(json.dumps(dados, indent=2) + "\n", "utf-8")
+
+
+def test_push_recusado_uma_vez_em_ramo_existente_atualiza_e_tenta_de_novo(
+    projeto, remoto, ambiente
+):
+    _publicar(projeto, remoto, ambiente)
+    _mudar_estado(projeto, "2026-10-23T17:00:00Z")
+    _hook(remoto, 'if [ ! -f "$GIT_DIR/ja_recusou" ]; then touch "$GIT_DIR/ja_recusou"; exit 1; fi')
+    r = _publicar(projeto, remoto, ambiente)
+    assert r.returncode == 0, r.stderr
+    assert "tentando uma vez mais" in r.stderr and "Site publicado" in r.stdout
+    assert len(_commits(remoto, ambiente)) == 2
+
+
+def test_push_recusado_sempre_em_ramo_existente_falha_apos_a_segunda_tentativa(
+    projeto, remoto, ambiente
+):
+    _publicar(projeto, remoto, ambiente)
+    _mudar_estado(projeto, "2026-10-24T17:00:00Z")
+    _hook(remoto, "exit 1")
+    r = _publicar(projeto, remoto, ambiente)
+    assert r.returncode != 0 and "Site publicado" not in r.stdout
+    assert "recusado de novo" in r.stderr
+    assert len(_commits(remoto, ambiente)) == 1
+
+
+def test_script_nao_esconde_o_erro_do_push():
+    codigo = "\n".join(
+        linha
+        for linha in SCRIPT.read_text("utf-8").splitlines()
+        if not linha.lstrip().startswith("#")
+    )
+    assert "2>/dev/null" not in codigo.replace(
+        "ls-remote --exit-code --heads origin", ""
+    )  # só o teste de existência do ramo
+    assert (
+        'ls-remote origin "refs/heads/${RAMO}"' in codigo
+    )  # confere no remoto antes de declarar sucesso

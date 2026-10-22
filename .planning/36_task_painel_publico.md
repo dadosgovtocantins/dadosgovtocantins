@@ -110,6 +110,10 @@ Nenhum ❌. Os ⚠️ são limites do Pages (S11), decisão do Bruno (S19) e mel
 ## Achado depois do envio: PRs do Dependabot
 O `dependabot.yml` abriu 7 PRs na hora (5 de `pip`, 2 de `github-actions`: `actions/checkout` 4→7 e `actions/setup-python` 5→7). Todos reprovam no job `segredos`: **PRs do Dependabot não recebem os segredos do Actions** (`PADRAO_EMAIL_INFRA` chega vazio e o `varrer_segredos.sh` sai com 2). Correção sem enfraquecer o gate: cadastrar o mesmo segredo também como **segredo do Dependabot** (`gh secret set PADRAO_EMAIL_INFRA --app dependabot`, valor vindo do arquivo local, sem imprimir). Pendente de autorização do Bruno; os PRs não foram mesclados nem fechados.
 
+## Achado na primeira publicação real (22/10/2026)
+- **Defeito meu em `publicar_site.sh`:** o push falhou (o token foi criado só com Metadata, sem **Contents: Read and write**: 403 em `painel`, e um blob vazio também é recusado), mas o script escondia o erro (`2>/dev/null`) e o `||` do fallback engolia a falha do `git pull` num repositório vazio: imprimiu "Site publicado" com o repositório público ainda vazio. Os testes só cobriam push que dá certo. **Correção:** nada de stderr escondido; mensagem clara de recusa; uma segunda tentativa só se o ramo existir no remoto; e sucesso só depois de conferir NO REMOTO (`git ls-remote`) que o ramo aponta para o commit. 4 testes novos reproduzem o caso (remoto que recusa via `pre-receive`, recusa uma vez, recusa sempre) e reprovam o script antigo (teste negativo feito).
+- **Token:** o Bruno colou o valor no chat (ficou no histórico da sessão local). Recomendado trocar depois da publicação: gerar de novo e cadastrar com `gh secret set` no terminal, sem colar em lugar nenhum.
+
 ## Verificação
 ```bash
 .venv/bin/pytest -q && .venv/bin/ruff check src tests scripts && .venv/bin/ruff format --check src tests scripts
