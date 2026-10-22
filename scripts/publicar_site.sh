@@ -4,9 +4,11 @@
 #
 # Clona o repositório público (raso), sincroniza a pasta com scripts/montar_site.py (só mudam os arquivos que
 # mudaram: bandeiras e GeoJSON não são regravados) e commita SÓ SE houver diferença. Nunca usa --force.
-# O token (PAT_PUBLICACAO_PAINEL, só para https) vai por variável de ambiente do Git, nunca na URL nem no
-# argumento de um comando, e nada aqui imprime variáveis nem liga o modo de depuração do shell.
-# Variáveis: PAT_PUBLICACAO_PAINEL (token), PYTHON (padrão: python3), PADRAO_EMAIL_INFRA (obrigatório).
+# A autenticação é uma DEPLOY KEY SSH (chave que vale para UM repositório, com escrita): PAINEL_DEPLOY_KEY traz a
+# chave privada, que vai para um arquivo temporário 0600 apagado ao sair, e nada aqui imprime variáveis nem liga o
+# modo de depuração do shell. O servidor é conferido contra as chaves oficiais da GitHub em scripts/github_known_hosts
+# (StrictHostKeyChecking=yes), sem configuração nem agente SSH da máquina.
+# Variáveis: PAINEL_DEPLOY_KEY (chave privada, só para URL ssh), PYTHON (padrão: python3), PADRAO_EMAIL_INFRA (obrigatório).
 set -euo pipefail
 set +x
 
@@ -15,16 +17,17 @@ RAMO="${2:-main}"
 PYTHON="${PYTHON:-python3}"
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-if [[ -n "${PAT_PUBLICACAO_PAINEL:-}" && "${URL}" == https://github.com/* ]]; then
-  cabecalho="$(printf 'x-access-token:%s' "${PAT_PUBLICACAO_PAINEL}" | base64 | tr -d '\n')"
-  export GIT_CONFIG_COUNT=1
-  export GIT_CONFIG_KEY_0="http.https://github.com/.extraheader"
-  export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${cabecalho}"
-fi
 export GIT_TERMINAL_PROMPT=0
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "${TMP}"' EXIT
+
+if [[ -n "${PAINEL_DEPLOY_KEY:-}" ]]; then
+  CHAVE="${TMP}/deploy_key"
+  (umask 077 && printf '%s\n' "${PAINEL_DEPLOY_KEY}" > "${CHAVE}")
+  export GIT_SSH_COMMAND="ssh -F /dev/null -i '${CHAVE}' -o IdentitiesOnly=yes -o IdentityAgent=none -o BatchMode=yes -o UserKnownHostsFile='${RAIZ}/scripts/github_known_hosts' -o StrictHostKeyChecking=yes"
+fi
+
 CLONE="${TMP}/painel"
 
 git clone --quiet --depth 1 "${URL}" "${CLONE}" || { echo "ERRO: não consegui clonar o repositório público." >&2; exit 1; }
@@ -49,7 +52,7 @@ if ! git push --quiet origin "HEAD:${RAMO}"; then
     git pull --quiet --rebase origin "${RAMO}" || { echo "ERRO: não consegui atualizar o clone." >&2; exit 1; }
     git push --quiet origin "HEAD:${RAMO}" || { echo "ERRO: o push foi recusado de novo; nada foi publicado." >&2; exit 1; }
   else
-    echo "ERRO: o push foi recusado (token sem permissão de escrita em Contents?); nada foi publicado." >&2
+    echo "ERRO: o push foi recusado (a deploy key precisa ter escrita no repositório público); nada foi publicado." >&2
     exit 1
   fi
 fi

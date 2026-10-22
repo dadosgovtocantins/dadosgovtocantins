@@ -17,8 +17,8 @@ O painel só roda no computador do Bruno (`python3 -m http.server`). A task 35 j
 | Arquivo | O que muda |
 |---|---|
 | `scripts/montar_site.py` | criar: copia para uma pasta de saída **só** os arquivos de uma lista fixa (nada fora dela), confere o conteúdo e falha se achar o e-mail de infraestrutura ou um segredo |
-| `scripts/publicar_site.sh` | criar: atualização **incremental** do clone do repositório público (só os arquivos que mudaram entram no commit) com token de escopo mínimo |
-| `.github/workflows/verificar.yml` | editar: passo de publicação depois do commit dos dados; só roda se o segredo `PAT_PUBLICACAO_PAINEL` existir |
+| `scripts/publicar_site.sh`, `scripts/github_known_hosts` | criar: atualização **incremental** do clone do repositório público (só os arquivos que mudaram entram no commit) por **deploy key SSH** (escrita só no `painel`); servidor conferido contra as chaves oficiais da GitHub |
+| `.github/workflows/verificar.yml` | editar: passo de publicação depois do commit dos dados; só roda se o segredo `PAINEL_DEPLOY_KEY` existir |
 | `.github/workflows/ci.yml` | editar: `pip-audit` no lock (S14) |
 | `.github/dependabot.yml` | criar: `pip` e `github-actions`, semanal (S14) |
 | `index.html`, `src/ui/painel-logica.js`, `src/ui/css/painel.css` | editar: ícones e fonte locais (sem unpkg), "Verificado em", situação das fontes, aviso legal dos titulares |
@@ -75,7 +75,7 @@ O painel só roda no computador do Bruno (`python3 -m http.server`). A task 35 j
 - [ ] 9. Fechar a task no ROADMAP.
 
 ## Segurança
-- **S1:** o token (`PAT_PUBLICACAO_PAINEL`, fine-grained, só o repositório `painel`, só `contents: write`) é segredo do GitHub; nunca no log nem na URL de clonagem gravada em disco (cabeçalho de autenticação por variável de ambiente).
+- **S1:** a deploy key SSH (`PAINEL_DEPLOY_KEY`, escrita só no `painel`, sem acesso à conta nem ao repositório do código) é segredo do GitHub; a chave privada nunca passa pelo chat nem pelo log: vai para um arquivo temporário 0600 apagado ao sair, sem configuração nem agente SSH da máquina e com o servidor conferido (`StrictHostKeyChecking=yes`).
 - **S2:** o site é só leitura; o texto vindo dos JSONs é sempre exibido como texto, nunca como HTML (como já é para o titular).
 - **S11:** o Pages força HTTPS; sem cabeçalhos próprios (limite do Pages), então o site não carrega script nem estilo de terceiros e a fonte, se externa, só como CSS de fonte. Registrar a limitação.
 - **S12:** o token de publicação não escreve em nenhum outro repositório; `verificar.yml` continua com `contents` e `issues` e nada além.
@@ -112,7 +112,8 @@ O `dependabot.yml` abriu 7 PRs na hora (5 de `pip`, 2 de `github-actions`: `acti
 
 ## Achado na primeira publicação real (22/10/2026)
 - **Defeito meu em `publicar_site.sh`:** o push falhou (o token foi criado só com Metadata, sem **Contents: Read and write**: 403 em `painel`, e um blob vazio também é recusado), mas o script escondia o erro (`2>/dev/null`) e o `||` do fallback engolia a falha do `git pull` num repositório vazio: imprimiu "Site publicado" com o repositório público ainda vazio. Os testes só cobriam push que dá certo. **Correção:** nada de stderr escondido; mensagem clara de recusa; uma segunda tentativa só se o ramo existir no remoto; e sucesso só depois de conferir NO REMOTO (`git ls-remote`) que o ramo aponta para o commit. 4 testes novos reproduzem o caso (remoto que recusa via `pre-receive`, recusa uma vez, recusa sempre) e reprovam o script antigo (teste negativo feito).
-- **Token:** o Bruno colou o valor no chat (ficou no histórico da sessão local). Recomendado trocar depois da publicação: gerar de novo e cadastrar com `gh secret set` no terminal, sem colar em lugar nenhum.
+- **Token substituído por deploy key (22/10/2026, a pedido do Bruno: "VC PODE FAZER?"):** o token fine-grained foi criado só com Metadata (sem Contents: Read and write), o Bruno não achou a permissão na tela e a GitHub não tem API para criar/editar tokens. Troquei por uma **deploy key SSH** com a mesma garantia de escopo (um repositório, escrita), feita por comando: chave ed25519 gerada localmente, parte pública cadastrada no `painel` (id 167257619, escrita), privada como segredo `PAINEL_DEPLOY_KEY`, cópia local apagada (`rm -P`). Provas: `git push --dry-run` no `painel` aceito (`[new branch] HEAD -> main`) e **recusado** no repositório do código (`denied to deploy key`); chaves do servidor da GitHub conferidas por duas fontes (API `/meta` e `ssh-keyscan`, SHA256:+DiY3wv…). O segredo `PAT_PUBLICACAO_PAINEL` foi apagado. O token que passou pelo chat tem só leitura de metadados e pode ser revogado em Settings > Developer settings (inofensivo, mas convém).
+- **SSH do Mac:** o `~/.ssh/config`/agente do computador do Bruno oferecia a chave pessoal da conta brunovima83 (`Hi brunovima!`); por isso o script usa `-F /dev/null`, `IdentityAgent=none` e `IdentitiesOnly=yes`.
 
 ## Verificação
 ```bash

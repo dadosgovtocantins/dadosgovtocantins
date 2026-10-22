@@ -90,22 +90,33 @@ pasta (só muda o que mudou; `.git` intacto). Para o site incluir um arquivo nov
 
 **Publicação.** O último passo do `verificar.yml` roda `scripts/publicar_site.sh`: clona o repositório público,
 monta o site nele e commita só se houver diferença (normalmente só o `estado_fontes.json`). Sem
-`PAT_PUBLICACAO_PAINEL` o passo termina verde dizendo "Publicação desligada".
+`PAINEL_DEPLOY_KEY` o passo termina verde dizendo "Publicação desligada".
 
-**Ligar a publicação (uma vez, feito pelo Bruno):**
-1. Criar o repositório público `dadosgovtocantins/painel` (vazio, sem README) e ativar Pages: Settings > Pages >
-   Deploy from a branch > `main` / `/ (root)`.
-2. Criar um token **fine-grained** (Settings > Developer settings): só o repositório `painel`, permissão
-   **Contents: Read and write**, sem nenhuma outra; validade com data (renovar antes de vencer).
-3. No repositório **privado**: Settings > Secrets and variables > Actions > New repository secret
-   `PAT_PUBLICACAO_PAINEL` = o token. O segredo `PADRAO_EMAIL_INFRA` já existe e é exigido pela publicação.
-4. Disparar **Verificar fontes** à mão e abrir o endereço do painel.
+**Autenticação: deploy key SSH** (decisão de 22/10/2026, no lugar do token fine-grained, que a GitHub não deixa
+criar nem editar por comando). É uma chave que vale para **um único repositório** (`painel`), com escrita, sem validade e
+sem acesso à conta nem ao repositório do código. A chave pública fica no `painel` (Settings > Deploy keys, "Allow write
+access"); a privada é o segredo `PAINEL_DEPLOY_KEY` no repositório do código. O servidor é conferido contra as chaves
+oficiais da GitHub em `scripts/github_known_hosts` (`StrictHostKeyChecking=yes`).
+
+**Ligar a publicação (uma vez):**
+1. Criar o repositório público `dadosgovtocantins/painel`, vazio (sem README nem licença).
+2. Gerar a chave e cadastrar (no terminal, logado no `gh` como `dadosgovtocantins`; a chave privada nunca é colada em lugar nenhum):
+   ```bash
+   ssh-keygen -t ed25519 -N "" -C "deploy-publicacao-painel" -f /tmp/chave_painel
+   gh api -X POST repos/dadosgovtocantins/painel/keys -f title="publicacao-painel" -f key="$(cat /tmp/chave_painel.pub)" -F read_only=false
+   gh secret set PAINEL_DEPLOY_KEY --repo dadosgovtocantins/dadosgovtocantins < /tmp/chave_painel
+   rm -P /tmp/chave_painel /tmp/chave_painel.pub
+   ```
+3. Disparar **Verificar fontes** à mão. Depois da 1ª publicação existe o ramo `main`: no repositório `painel`, Settings >
+   Pages > Deploy from a branch > `main` / `/ (root)`. O painel abre em 1 a 2 minutos.
 
 **Reverter uma publicação ruim:** nunca `--force`. No repositório público, `git revert <commit>` e push; o site volta
 ao estado anterior no próximo build do Pages (1 a 2 min). Para tirar o painel do ar: apagar o segredo
-`PAT_PUBLICACAO_PAINEL` (para de publicar) e, se preciso, desativar Pages no repositório público.
+`PAINEL_DEPLOY_KEY` (para de publicar) e, se preciso, desativar Pages no repositório público.
 
-**Trocar/revogar o token:** gerar outro, atualizar o segredo e revogar o antigo na conta do projeto.
+**Trocar/revogar a chave (suspeita de vazamento, a cada ano ou ao trocar de responsável):** apagar a deploy key no
+`painel` (Settings > Deploy keys, ou `gh api -X DELETE repos/dadosgovtocantins/painel/keys/<id>`), repetir o passo 2 e o
+segredo é substituído.
 
 ---
 

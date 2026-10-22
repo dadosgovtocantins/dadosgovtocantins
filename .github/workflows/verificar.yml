@@ -77,14 +77,14 @@ jobs:
       - name: Publicar o site no repositório público
         if: ${{ !cancelled() && steps.atualizar.outcome == 'success' }}
         env:
-          # Token fine-grained só do repositório público, só "contents: write". Sem ele a publicação fica desligada.
-          PAT_PUBLICACAO_PAINEL: ${{ secrets.PAT_PUBLICACAO_PAINEL }}
+          # Deploy key SSH com escrita SÓ no repositório público (privada aqui, pública lá). Sem ela, a publicação fica desligada.
+          PAINEL_DEPLOY_KEY: ${{ secrets.PAINEL_DEPLOY_KEY }}
           PADRAO_EMAIL_INFRA: ${{ secrets.PADRAO_EMAIL_INFRA }}
           REPOSITORIO_PUBLICO: dadosgovtocantins/painel
         run: |
           set -euo pipefail
-          if [ -z "${PAT_PUBLICACAO_PAINEL}" ]; then
-            echo "Publicação desligada: o segredo PAT_PUBLICACAO_PAINEL não existe."
+          if [ -z "${PAINEL_DEPLOY_KEY}" ]; then
+            echo "Publicação desligada: o segredo PAINEL_DEPLOY_KEY não existe."
             exit 0
           fi
-          bash scripts/publicar_site.sh "https://github.com/${REPOSITORIO_PUBLICO}.git" main
+          bash scripts/publicar_site.sh "git@github.com:${REPOSITORIO_PUBLICO}.git" main
